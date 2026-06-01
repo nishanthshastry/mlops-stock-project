@@ -4,7 +4,7 @@ import pandas as pd
 from mlops_stock_project.config import (
     RAW_DATA_FILE,
     PROCESSED_DATA_DIR,
-    PROCESSED_DATA_FILE
+    PROCESSED_DATA_FILE,
 )
 
 from mlops_stock_project.logging_config import get_logger
@@ -36,9 +36,7 @@ def build_features(input_path=RAW_DATA_FILE):
     df["Volatility"] = df["Close"].rolling(window=5).std()
 
     # Binary target
-    df["Target"] = (
-        df["Close"].shift(-1) > df["Close"]
-    ).astype(int)
+    df["Target"] = (df["Close"].shift(-1) > df["Close"]).astype(int)
 
     # Remove missing values
     df = df.dropna()
@@ -51,6 +49,7 @@ def build_features(input_path=RAW_DATA_FILE):
     logger.info(f"Processed features saved to {PROCESSED_DATA_FILE}")
 
     return df
+
 
 if __name__ == "__main__":
     build_features()

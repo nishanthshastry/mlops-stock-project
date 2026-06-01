@@ -7,11 +7,7 @@ from mlops_stock_project.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-def save_accuracy_plot(
-    accuracies,
-    title,
-    filename
-):
+def save_accuracy_plot(accuracies, title, filename):
     os.makedirs(FIGURES_DIR, exist_ok=True)
 
     plt.figure(figsize=(10, 5))

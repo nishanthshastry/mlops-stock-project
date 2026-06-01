@@ -3,34 +3,21 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
-from mlops_stock_project.config import (
-    PROCESSED_DATA_FILE
-)
+from mlops_stock_project.config import PROCESSED_DATA_FILE
 
-from mlops_stock_project.logging_config import (
-    get_logger
-)
+from mlops_stock_project.logging_config import get_logger
 
-from mlops_stock_project.visualization.visualize import (
-    save_accuracy_plot
-)
+from mlops_stock_project.visualization.visualize import save_accuracy_plot
 
 logger = get_logger(__name__)
 
 
-def simulate_baseline(
-    data_path=PROCESSED_DATA_FILE
-):
+def simulate_baseline(data_path=PROCESSED_DATA_FILE):
     logger.info("Running baseline simulation...")
 
     df = pd.read_csv(data_path)
 
-    features = [
-        "Return",
-        "MA_5",
-        "MA_10",
-        "Volatility"
-    ]
+    features = ["Return", "MA_5", "MA_10", "Volatility"]
 
     split_index = int(len(df) * 0.6)
 
@@ -40,10 +27,7 @@ def simulate_baseline(
 
     model = LogisticRegression()
 
-    model.fit(
-        train_data[features],
-        train_data["Target"]
-    )
+    model.fit(train_data[features], train_data["Target"])
 
     accuracies = []
 
@@ -63,7 +47,7 @@ def simulate_baseline(
     save_accuracy_plot(
         accuracies,
         title="Baseline Model Accuracy Over Time",
-        filename="baseline_accuracy.png"
+        filename="baseline_accuracy.png",
     )
 
     logger.info("Baseline simulation completed")

@@ -41,6 +41,18 @@ jobs:
         python -c "from mlops_stock_project.api.app import app"
         python -c "from mlops_stock_project.models.train_model import train_model"
 
+    - name: Run Ruff
+      run: |
+        ruff check .
+
+    - name: Run Black Check
+      run: |
+        black --check .
+
+    - name: Run Tests
+      run: |
+        pytest
+
     - name: Build Docker Image
       run: |
         docker build -t mlops-stock-api -f dockerfiles/Dockerfile .

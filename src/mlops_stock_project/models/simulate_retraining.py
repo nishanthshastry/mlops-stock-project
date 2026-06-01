@@ -3,35 +3,21 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
-from mlops_stock_project.config import (
-    PROCESSED_DATA_FILE
-)
+from mlops_stock_project.config import PROCESSED_DATA_FILE
 
-from mlops_stock_project.logging_config import (
-    get_logger
-)
+from mlops_stock_project.logging_config import get_logger
 
-from mlops_stock_project.visualization.visualize import (
-    save_accuracy_plot
-)
+from mlops_stock_project.visualization.visualize import save_accuracy_plot
 
 logger = get_logger(__name__)
 
 
-def simulate_scheduled_retraining(
-    data_path=PROCESSED_DATA_FILE,
-    retrain_interval=20
-):
+def simulate_scheduled_retraining(data_path=PROCESSED_DATA_FILE, retrain_interval=20):
     logger.info("Running scheduled retraining simulation...")
 
     df = pd.read_csv(data_path)
 
-    features = [
-        "Return",
-        "MA_5",
-        "MA_10",
-        "Volatility"
-    ]
+    features = ["Return", "MA_5", "MA_10", "Volatility"]
 
     split_index = int(len(df) * 0.6)
 
@@ -41,10 +27,7 @@ def simulate_scheduled_retraining(
 
     model = LogisticRegression()
 
-    model.fit(
-        train_data[features],
-        train_data["Target"]
-    )
+    model.fit(train_data[features], train_data["Target"])
 
     accuracies = []
 
@@ -63,22 +46,17 @@ def simulate_scheduled_retraining(
 
         # Scheduled retraining
         if i % retrain_interval == 0:
-            retrain_data = df[:split_index + i]
+            retrain_data = df[: split_index + i]
 
-            model.fit(
-                retrain_data[features],
-                retrain_data["Target"]
-            )
+            model.fit(retrain_data[features], retrain_data["Target"])
 
     save_accuracy_plot(
         accuracies,
         title="Scheduled Retraining Accuracy Over Time",
-        filename="scheduled_retraining_accuracy.png"
+        filename="scheduled_retraining_accuracy.png",
     )
 
-    logger.info(
-        "Scheduled retraining simulation completed"
-    )
+    logger.info("Scheduled retraining simulation completed")
 
     return accuracies
 
