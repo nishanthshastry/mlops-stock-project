@@ -29,7 +29,6 @@ def detect_drift(
     drift_detected = False
 
     for feature in features:
-
         reference_mean = reference_df[feature].mean()
         new_mean = new_df[feature].mean()
 
@@ -38,14 +37,10 @@ def detect_drift(
 
         drift_score = abs(new_mean - reference_mean) / abs(reference_mean)
 
-        logger.info(
-            f"{feature} drift score: {drift_score:.4f}"
-        )
+        logger.info(f"{feature} drift score: {drift_score:.4f}")
 
         if drift_score > threshold:
-            logger.warning(
-                f"Drift detected in feature: {feature}"
-            )
+            logger.warning(f"Drift detected in feature: {feature}")
             drift_detected = True
 
     if drift_detected:

@@ -34,28 +34,18 @@ def load_model():
     global model
 
     try:
-
         if os.path.exists(MODEL_FILE):
-
             model = joblib.load(MODEL_FILE)
 
-            logger.info(
-                f"Loaded model from {MODEL_FILE}"
-            )
+            logger.info(f"Loaded model from {MODEL_FILE}")
 
         else:
-
-            logger.warning(
-                f"Model file not found at {MODEL_FILE}"
-            )
+            logger.warning(f"Model file not found at {MODEL_FILE}")
 
             model = None
 
     except Exception as e:
-
-        logger.error(
-            f"Error loading model: {str(e)}"
-        )
+        logger.error(f"Error loading model: {str(e)}")
 
         model = None
 
@@ -67,70 +57,44 @@ load_model()
 @app.get("/")
 def home():
 
-    return {
-        "message": (
-            "MLOps Stock Prediction API Running"
-        )
-    }
+    return {"message": ("MLOps Stock Prediction API Running")}
 
 
 @app.post("/predict")
 def predict(data: StockFeatures):
 
     try:
-
         if model is None:
-
             return {
-                "error": (
-                    "Model not loaded. "
-                    "Please train or pull model artifacts."
-                )
+                "error": ("Model not loaded. Please train or pull model artifacts.")
             }
 
-        df = pd.DataFrame(
-            [data.model_dump()]
-        )
+        df = pd.DataFrame([data.model_dump()])
 
         prediction = model.predict(df)[0]
 
-        logger.info(
-            f"Prediction made: {prediction}"
-        )
+        logger.info(f"Prediction made: {prediction}")
 
-        return {
-            "prediction": int(prediction)
-        }
+        return {"prediction": int(prediction)}
 
     except Exception as e:
-
         logger.error(str(e))
 
-        return {
-            "error": str(e)
-        }
+        return {"error": str(e)}
 
 
 @app.post("/retrain")
 def retrain():
 
     try:
-
         retrain_if_drift_detected()
 
         # Reload latest model after retraining
         load_model()
 
-        return {
-            "message": (
-                "Retraining workflow completed."
-            )
-        }
+        return {"message": ("Retraining workflow completed.")}
 
     except Exception as e:
-
         logger.error(str(e))
 
-        return {
-            "error": str(e)
-        }
+        return {"error": str(e)}

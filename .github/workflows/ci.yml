@@ -14,6 +14,7 @@ on:
       - dev
 
 jobs:
+
   test:
 
     runs-on: ubuntu-latest
@@ -22,6 +23,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      PYTHONPATH: src
 
     steps:
 
@@ -33,23 +35,33 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install "dvc[s3]"
 
+    - name: Verify DVC
+      run: |
+        dvc version
+
     - name: Pull DVC Artifacts
       run: |
         dvc pull
-
-    - name: Set PYTHONPATH
-      run: echo "PYTHONPATH=src" >> $GITHUB_ENV
 
     - name: Verify Imports
       run: |
         python -c "from mlops_stock_project.api.app import app"
         python -c "from mlops_stock_project.models.train_model import train_model"
+        python -c "from mlops_stock_project.monitoring.drift import detect_drift"
 
     - name: Run Ruff
       run: |
@@ -61,8 +73,18 @@ jobs:
 
     - name: Run Tests
       run: |
-        pytest
+        pytest -v
 
     - name: Build Docker Image
       run: |
-        docker build -t mlops-stock-api -f dockerfiles/Dockerfile .
+        docker build \
+          -t mlops-stock-api \
+          -f dockerfiles/Dockerfile .
+
+    - name: Verify Docker Image
+      run: |
+        docker images
+
+    - name: CI Pipeline Completed
+      run: |
+        echo "MLOps CI Pipeline completed successfully."

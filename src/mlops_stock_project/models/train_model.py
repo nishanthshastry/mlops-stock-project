@@ -1,5 +1,5 @@
 import os
-
+import subprocess
 import joblib
 import mlflow
 import mlflow.sklearn
@@ -44,7 +44,6 @@ def train_model(data_path=PROCESSED_DATA_FILE):
     mlflow.set_experiment("mlops-stock-prediction")
 
     with mlflow.start_run():
-
         logger.info("Starting MLflow run...")
 
         # Model parameters
@@ -87,11 +86,20 @@ def train_model(data_path=PROCESSED_DATA_FILE):
 
         logger.info(f"Model saved to {MODEL_FILE}")
 
+        # Track model with DVC
+        try:
+            subprocess.run(
+                ["dvc", "add", str(MODEL_FILE)],
+                check=True,
+            )
+
+            logger.info("Model artifact tracked with DVC")
+
+        except Exception as e:
+            logger.warning(f"DVC tracking failed: {str(e)}")
+
         # Log model to MLflow
-        mlflow.sklearn.log_model(
-            sk_model=model,
-            name="model"
-        )
+        mlflow.sklearn.log_model(sk_model=model, name="model")
 
         # Log model artifact file
         mlflow.log_artifact(MODEL_FILE)

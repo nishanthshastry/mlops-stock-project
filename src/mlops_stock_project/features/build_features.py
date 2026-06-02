@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import subprocess
 
 from mlops_stock_project.config import (
     RAW_DATA_FILE,
@@ -45,6 +46,17 @@ def build_features(input_path=RAW_DATA_FILE):
     os.makedirs(PROCESSED_DATA_DIR, exist_ok=True)
 
     df.to_csv(PROCESSED_DATA_FILE, index=False)
+
+    try:
+        subprocess.run(
+            ["dvc", "add", str(PROCESSED_DATA_FILE)],
+            check=True,
+        )
+
+        logger.info("Processed dataset tracked with DVC")
+
+    except Exception as e:
+        logger.warning(f"DVC tracking failed: {str(e)}")
 
     logger.info(f"Processed features saved to {PROCESSED_DATA_FILE}")
 
