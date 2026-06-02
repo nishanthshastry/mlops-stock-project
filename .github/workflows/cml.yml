@@ -1,0 +1,104 @@
+name: CML Workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+  push:
+    branches:
+      - main
+      - dev
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  train-and-report:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      PYTHONPATH: src
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up CML
+        uses: iterative/setup-cml@v2
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "dvc[s3]"
+          pip install -r requirements.txt
+
+      - name: Pull DVC Data
+        run: |
+          dvc pull
+
+      - name: Create Reports Directories
+        run: |
+          mkdir -p reports/figures
+          mkdir -p reports/monitoring
+
+      - name: Run Training Pipeline
+        run: |
+          python -m mlops_stock_project.models.train_model
+
+      - name: Run Drift Detection
+        run: |
+          python -m mlops_stock_project.monitoring.drift
+
+      - name: Generate CML Report
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "# MLOps Stock Prediction Report" > report.md
+          echo "" >> report.md
+
+          echo "## Pipeline Status" >> report.md
+          echo "Training and monitoring completed successfully." >> report.md
+          echo "" >> report.md
+
+          echo "## Experiment Information" >> report.md
+          echo "- Framework: GitHub Actions + CML + DVC" >> report.md
+          echo "- Storage: AWS S3 + DVC" >> report.md
+          echo "- API: FastAPI" >> report.md
+          echo "- Tracking: MLflow" >> report.md
+          echo "" >> report.md
+
+          echo "## Docker Image" >> report.md
+          echo "DockerHub Repo: nshastry00/mlops-stock-api" >> report.md
+          echo "" >> report.md
+
+          echo "## Monitoring" >> report.md
+          echo "Drift detection workflow executed successfully." >> report.md
+          echo "" >> report.md
+
+          cml comment create --publish report.md
+
+      - name: Upload CML Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cml-report-artifacts
+          path: |
+            report.md
+            reports/
