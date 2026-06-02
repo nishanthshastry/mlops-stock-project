@@ -1,16 +1,18 @@
 import os
 import subprocess
+import sys
 import joblib
 import mlflow
 import mlflow.sklearn
 import pandas as pd
 
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import ExtraTreesClassifier
 
 from mlops_stock_project.config import (
     MODEL_DIR,
     MODEL_FILE,
     PROCESSED_DATA_FILE,
+    PROJECT_ROOT,
 )
 from mlops_stock_project.evaluation.metrics import (
     evaluate_classification_model,
@@ -41,18 +43,22 @@ def train_model(data_path=PROCESSED_DATA_FILE):
     y_test = y[split_index:]
 
     # MLflow experiment tracking
+    mlflow.set_tracking_uri(f"sqlite:///{PROJECT_ROOT / 'mlflow.db'}")
     mlflow.set_experiment("mlops-stock-prediction")
 
     with mlflow.start_run():
         logger.info("Starting MLflow run...")
 
         # Model parameters
-        max_iter = 200
+        n_estimators = 400
+        min_samples_leaf = 4
         random_state = 42
 
         # Train model
-        model = LogisticRegression(
-            max_iter=max_iter,
+        model = ExtraTreesClassifier(
+            n_estimators=n_estimators,
+            min_samples_leaf=min_samples_leaf,
+            class_weight="balanced",
             random_state=random_state,
         )
 
@@ -71,9 +77,12 @@ def train_model(data_path=PROCESSED_DATA_FILE):
         logger.info(f"Model Accuracy: {accuracy:.4f}")
 
         # Log parameters
-        mlflow.log_param("model_type", "LogisticRegression")
-        mlflow.log_param("max_iter", max_iter)
+        mlflow.log_param("model_type", "ExtraTreesClassifier")
+        mlflow.log_param("n_estimators", n_estimators)
+        mlflow.log_param("min_samples_leaf", min_samples_leaf)
+        mlflow.log_param("class_weight", "balanced")
         mlflow.log_param("random_state", random_state)
+        mlflow.log_param("features", ",".join(features))
 
         # Log metrics
         for metric_name, metric_value in metrics.items():
@@ -89,7 +98,7 @@ def train_model(data_path=PROCESSED_DATA_FILE):
         # Track model with DVC
         try:
             subprocess.run(
-                ["dvc", "add", str(MODEL_FILE)],
+                [sys.executable, "-m", "dvc", "add", str(MODEL_FILE)],
                 check=True,
             )
 
