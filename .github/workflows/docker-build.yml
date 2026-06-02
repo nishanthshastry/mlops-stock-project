@@ -43,10 +43,9 @@ jobs:
         with:
           images: nshastry00/mlops-stock-api
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
             type=sha
             type=ref,event=branch
-            type=ref,event=tag
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
