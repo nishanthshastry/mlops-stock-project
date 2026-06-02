@@ -1,14 +1,21 @@
 import os
+
 import joblib
+import mlflow
+import mlflow.sklearn
 import pandas as pd
 
 from sklearn.linear_model import LogisticRegression
 
-from mlops_stock_project.config import PROCESSED_DATA_FILE, MODEL_DIR, MODEL_FILE
-
+from mlops_stock_project.config import (
+    MODEL_DIR,
+    MODEL_FILE,
+    PROCESSED_DATA_FILE,
+)
+from mlops_stock_project.evaluation.metrics import (
+    evaluate_classification_model,
+)
 from mlops_stock_project.logging_config import get_logger
-
-from mlops_stock_project.evaluation.metrics import evaluate_classification_model
 
 logger = get_logger(__name__)
 
@@ -16,6 +23,7 @@ logger = get_logger(__name__)
 def train_model(data_path=PROCESSED_DATA_FILE):
     logger.info("Training model...")
 
+    # Load processed dataset
     df = pd.read_csv(data_path)
 
     features = ["Return", "MA_5", "MA_10", "Volatility"]
@@ -32,25 +40,63 @@ def train_model(data_path=PROCESSED_DATA_FILE):
     y_train = y[:split_index]
     y_test = y[split_index:]
 
-    # Train model
-    model = LogisticRegression()
+    # MLflow experiment tracking
+    mlflow.set_experiment("mlops-stock-prediction")
 
-    model.fit(X_train, y_train)
+    with mlflow.start_run():
 
-    # Predictions
-    y_pred = model.predict(X_test)
+        logger.info("Starting MLflow run...")
 
-    # Evaluate
-    metrics = evaluate_classification_model(y_test, y_pred)
+        # Model parameters
+        max_iter = 200
+        random_state = 42
 
-    logger.info(f"Model Accuracy: {metrics['accuracy']:.4f}")
+        # Train model
+        model = LogisticRegression(
+            max_iter=max_iter,
+            random_state=random_state,
+        )
 
-    # Save model artifact
-    os.makedirs(MODEL_DIR, exist_ok=True)
+        model.fit(X_train, y_train)
 
-    joblib.dump(model, MODEL_FILE)
+        logger.info("Model training completed")
 
-    logger.info(f"Model saved to {MODEL_FILE}")
+        # Predictions
+        y_pred = model.predict(X_test)
+
+        # Evaluate
+        metrics = evaluate_classification_model(y_test, y_pred)
+
+        accuracy = metrics["accuracy"]
+
+        logger.info(f"Model Accuracy: {accuracy:.4f}")
+
+        # Log parameters
+        mlflow.log_param("model_type", "LogisticRegression")
+        mlflow.log_param("max_iter", max_iter)
+        mlflow.log_param("random_state", random_state)
+
+        # Log metrics
+        for metric_name, metric_value in metrics.items():
+            mlflow.log_metric(metric_name, metric_value)
+
+        # Save model artifact locally
+        os.makedirs(MODEL_DIR, exist_ok=True)
+
+        joblib.dump(model, MODEL_FILE)
+
+        logger.info(f"Model saved to {MODEL_FILE}")
+
+        # Log model to MLflow
+        mlflow.sklearn.log_model(
+            sk_model=model,
+            name="model"
+        )
+
+        # Log model artifact file
+        mlflow.log_artifact(MODEL_FILE)
+
+        logger.info("MLflow tracking completed")
 
     return model, metrics
 

@@ -8,6 +8,10 @@ from mlops_stock_project.config import MODEL_FILE
 
 from mlops_stock_project.logging_config import get_logger
 
+from mlops_stock_project.monitoring.retrain import (
+    retrain_if_drift_detected,
+)
+
 logger = get_logger(__name__)
 
 app = FastAPI(title="MLOps Stock Prediction API")
@@ -45,3 +49,24 @@ def predict(data: StockFeatures):
     except Exception as e:
         logger.error(str(e))
         return {"error": str(e)}
+
+@app.post("/retrain")
+def retrain():
+
+    try:
+
+        retrain_if_drift_detected()
+
+        return {
+            "message": (
+                "Retraining workflow completed."
+            )
+        }
+
+    except Exception as e:
+
+        logger.error(str(e))
+
+        return {
+            "error": str(e)
+        }
