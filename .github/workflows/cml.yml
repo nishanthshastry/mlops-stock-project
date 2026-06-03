@@ -45,8 +45,9 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Setup CML
-        uses: iterative/setup-cml@v2
+      - name: Install CML
+        run: |
+          npm install -g @dvcorg/cml
 
       - name: Cache pip
         uses: actions/cache@v4
