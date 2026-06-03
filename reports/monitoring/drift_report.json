@@ -1,62 +1,62 @@
 {
     "overall_drift_detected": true,
     "drifted_features": [
-        "Return",
         "Volatility",
-        "MACD"
+        "MACD",
+        "Relative_SPY_Strength"
     ],
     "feature_results": {
         "Return": {
-            "psi_score": 0.3,
-            "ks_pvalue": 0.024426,
-            "severity": "significant",
-            "drift_detected": true
+            "psi_score": 0.1801,
+            "ks_pvalue": 0.0,
+            "severity": "moderate",
+            "drift_detected": false
         },
         "Volatility": {
-            "psi_score": 0.386,
-            "ks_pvalue": 0.000145,
+            "psi_score": 0.5543,
+            "ks_pvalue": 0.0,
             "severity": "significant",
             "drift_detected": true
         },
         "RSI": {
-            "psi_score": 0.2831,
-            "ks_pvalue": 0.069838,
-            "severity": "significant",
+            "psi_score": 0.0082,
+            "ks_pvalue": 0.046767,
+            "severity": "stable",
             "drift_detected": false
         },
         "MACD": {
-            "psi_score": 1.1052,
-            "ks_pvalue": 0.002497,
+            "psi_score": 0.305,
+            "ks_pvalue": 0.0,
             "severity": "significant",
             "drift_detected": true
         },
         "SPY_Return": {
-            "psi_score": 0.1066,
-            "ks_pvalue": 0.511247,
-            "severity": "moderate",
+            "psi_score": 0.0,
+            "ks_pvalue": 1.0,
+            "severity": "stable",
             "drift_detected": false
         },
         "QQQ_Return": {
-            "psi_score": 0.0959,
-            "ks_pvalue": 0.478465,
+            "psi_score": 0.0,
+            "ks_pvalue": 1.0,
             "severity": "stable",
             "drift_detected": false
         },
         "VIX_Level": {
-            "psi_score": 0.2319,
-            "ks_pvalue": 0.003386,
-            "severity": "moderate",
+            "psi_score": 0.0,
+            "ks_pvalue": 1.0,
+            "severity": "stable",
             "drift_detected": false
         },
         "Relative_SPY_Strength": {
-            "psi_score": 0.2676,
-            "ks_pvalue": 0.053195,
+            "psi_score": 0.2829,
+            "ks_pvalue": 0.0,
             "severity": "significant",
-            "drift_detected": false
+            "drift_detected": true
         },
         "Market_Stress": {
             "psi_score": 0.0,
-            "ks_pvalue": 0.999963,
+            "ks_pvalue": 1.0,
             "severity": "stable",
             "drift_detected": false
         }

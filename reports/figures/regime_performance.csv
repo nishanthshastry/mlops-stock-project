@@ -1,4 +1,4 @@
 Regime,Samples,Accuracy,Precision,Recall,F1_Score,Average_Return,Sharpe_Ratio,Win_Rate
 High Volatility,150,0.9467,0.9245,1.0,0.9608,0.01197,3.8405,0.4
-Low Volatility,3750,0.8989,0.8401,0.9278,0.8817,0.00361,3.0849,0.2856
-Medium Volatility,1080,0.8944,0.8502,0.9797,0.9104,0.005551,3.9098,0.4065
+Low Volatility,3750,0.9067,0.8531,0.9304,0.8901,0.003691,3.1862,0.2835
+Medium Volatility,1080,0.9019,0.8582,0.9831,0.9164,0.005836,4.1877,0.4083
