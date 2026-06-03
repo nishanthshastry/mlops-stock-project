@@ -1,58 +1,135 @@
 import pandas as pd
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from mlops_stock_project.config import (
+    PROCESSED_DATA_FILE,
+    REPORTS_FIGURES_DIR,
+)
 
-from mlops_stock_project.config import PROCESSED_DATA_FILE
+from mlops_stock_project.features.feature_pipeline import (
+    prepare_features,
+)
 
-from mlops_stock_project.logging_config import get_logger
+from mlops_stock_project.logging_config import (
+    get_logger,
+)
 
-from mlops_stock_project.visualization.visualize import save_accuracy_plot
+from mlops_stock_project.models.simulate_utils import (
+    load_model_artifact,
+    create_xgboost_model,
+    compute_classification_metrics,
+    plot_simulation_metrics,
+)
 
 logger = get_logger(__name__)
 
 
-def simulate_baseline(data_path=PROCESSED_DATA_FILE):
+# BASELINE SIMULATION
+
+
+def simulate_baseline(
+    data_path=PROCESSED_DATA_FILE,
+):
+
     logger.info("Running baseline simulation...")
 
+    # LOAD DATA
     df = pd.read_csv(data_path)
 
-    features = ["Return", "MA_5", "MA_10", "Volatility"]
+    df["Date"] = pd.to_datetime(df["Date"])
 
-    split_index = int(len(df) * 0.6)
+    df = df.sort_values(["Ticker", "Date"])
 
-    train_data = df[:split_index]
+    logger.info(f"Loaded dataset shape: {df.shape}")
 
-    test_data = df[split_index:]
+    # LOAD ARTIFACT
+    artifact = load_model_artifact()
 
-    model = LogisticRegression()
+    features = artifact["features"]
 
-    model.fit(train_data[features], train_data["Target"])
+    logger.info(f"Using {len(features)} features")
 
-    accuracies = []
+    # SPLIT DATA
+    split_date = df["Date"].quantile(0.6)
 
-    window_size = 20
+    train_data = df[df["Date"] < split_date].copy()
 
-    for i in range(window_size, len(test_data)):
-        window = test_data.iloc[:i]
+    test_data = df[df["Date"] >= split_date].copy()
+
+    # PREPARE FEATURES
+    X_train = prepare_features(
+        train_data,
+        features,
+    )
+
+    y_train = train_data["Target"]
+
+    # TRAIN MODEL
+    model = create_xgboost_model()
+
+    model.fit(
+        X_train,
+        y_train,
+    )
+
+    # ROLLING EVALUATION
+    window_size = 250
+
+    f1_scores = []
+
+    precision_scores = []
+
+    recall_scores = []
+
+    evaluation_steps = []
+
+    for i in range(
+        window_size,
+        len(test_data),
+    ):
+        window = test_data.iloc[:i].copy()
+
+        X_window = prepare_features(
+            window,
+            features,
+        )
 
         y_true = window["Target"]
 
-        y_pred = model.predict(window[features])
+        y_pred = model.predict(X_window)
 
-        acc = accuracy_score(y_true, y_pred)
+        metrics = compute_classification_metrics(
+            y_true,
+            y_pred,
+        )
 
-        accuracies.append(acc)
+        f1_scores.append(metrics["f1"])
 
-    save_accuracy_plot(
-        accuracies,
-        title="Baseline Model Accuracy Over Time",
-        filename="baseline_accuracy.png",
+        precision_scores.append(metrics["precision"])
+
+        recall_scores.append(metrics["recall"])
+
+        evaluation_steps.append(i)
+
+    # FINAL METRICS
+    logger.info(f"Final F1: {f1_scores[-1]:.4f}")
+
+    logger.info(f"Final Precision: {precision_scores[-1]:.4f}")
+
+    logger.info(f"Final Recall: {recall_scores[-1]:.4f}")
+
+    # PLOT
+    output_file = REPORTS_FIGURES_DIR / "baseline_performance.png"
+
+    plot_simulation_metrics(
+        evaluation_steps=evaluation_steps,
+        f1_scores=f1_scores,
+        precision_scores=precision_scores,
+        recall_scores=recall_scores,
+        output_file=output_file,
+        title="Baseline Model Performance (No Retraining)",
     )
 
     logger.info("Baseline simulation completed")
-
-    return accuracies
 
 
 if __name__ == "__main__":

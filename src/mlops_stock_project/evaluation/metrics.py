@@ -13,24 +13,20 @@ def evaluate_classification_model(
 ):
 
     metrics = {
-
         "accuracy": accuracy_score(
             y_true,
             y_pred,
         ),
-
         "precision": precision_score(
             y_true,
             y_pred,
             zero_division=0,
         ),
-
         "recall": recall_score(
             y_true,
             y_pred,
             zero_division=0,
         ),
-
         "f1_score": f1_score(
             y_true,
             y_pred,
@@ -40,14 +36,12 @@ def evaluate_classification_model(
 
     # Optional ROC-AUC
     try:
-
         metrics["roc_auc"] = roc_auc_score(
             y_true,
             y_pred,
         )
 
     except Exception:
-
         metrics["roc_auc"] = 0.0
 
     return metrics

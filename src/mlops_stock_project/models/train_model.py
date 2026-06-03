@@ -1,14 +1,18 @@
 import os
-import subprocess
 import sys
+import subprocess
 
 import joblib
 import mlflow
 import mlflow.sklearn
+
 import pandas as pd
+import numpy as np
+
 import matplotlib.pyplot as plt
 
 from sklearn.pipeline import Pipeline
+
 from sklearn.preprocessing import (
     StandardScaler,
 )
@@ -22,8 +26,15 @@ from sklearn.ensemble import (
     ExtraTreesClassifier,
 )
 
+from sklearn.model_selection import (
+    TimeSeriesSplit,
+)
+
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
+    f1_score,
+    precision_score,
+    recall_score,
 )
 
 from xgboost import XGBClassifier
@@ -33,11 +44,11 @@ from mlops_stock_project.config import (
     MODEL_FILE,
     PROCESSED_DATA_FILE,
     PROJECT_ROOT,
-    FIGURES_DIR,
+    REPORTS_FIGURES_DIR,
 )
 
-from mlops_stock_project.evaluation.metrics import (
-    evaluate_classification_model,
+from mlops_stock_project.features.feature_pipeline import (
+    prepare_features,
 )
 
 from mlops_stock_project.logging_config import (
@@ -47,32 +58,134 @@ from mlops_stock_project.logging_config import (
 logger = get_logger(__name__)
 
 
-def train_model(data_path=PROCESSED_DATA_FILE,):
+# ======================================
+# THRESHOLD OPTIMIZATION
+# ======================================
+def optimize_threshold(
+    y_true,
+    y_prob,
+):
 
-    logger.info("Training model...")
+    best_threshold = 0.5
 
-    # Load Dataset
+    best_f1 = 0
+
+    thresholds = np.arange(
+        0.30,
+        0.71,
+        0.02,
+    )
+
+    for threshold in thresholds:
+        y_pred = (y_prob >= threshold).astype(int)
+
+        score = f1_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        )
+
+        if score > best_f1:
+            best_f1 = score
+
+            best_threshold = threshold
+
+    return (
+        best_threshold,
+        best_f1,
+    )
+
+
+# ======================================
+# MODEL DEFINITIONS
+# ======================================
+def build_models():
+
+    return {
+        "LogisticRegression": Pipeline(
+            [
+                (
+                    "scaler",
+                    StandardScaler(),
+                ),
+                (
+                    "model",
+                    LogisticRegression(
+                        max_iter=2000,
+                        class_weight="balanced",
+                        C=0.5,
+                        random_state=42,
+                    ),
+                ),
+            ]
+        ),
+        "RandomForest": (
+            RandomForestClassifier(
+                n_estimators=500,
+                max_depth=12,
+                min_samples_leaf=3,
+                min_samples_split=5,
+                class_weight="balanced_subsample",
+                n_jobs=-1,
+                random_state=42,
+            )
+        ),
+        "ExtraTrees": (
+            ExtraTreesClassifier(
+                n_estimators=700,
+                max_depth=14,
+                min_samples_leaf=2,
+                min_samples_split=4,
+                class_weight="balanced",
+                n_jobs=-1,
+                random_state=42,
+            )
+        ),
+        "XGBoost": (
+            XGBClassifier(
+                n_estimators=700,
+                max_depth=10,
+                learning_rate=0.02,
+                subsample=0.85,
+                colsample_bytree=0.85,
+                gamma=1,
+                min_child_weight=3,
+                reg_alpha=0.5,
+                reg_lambda=1.5,
+                eval_metric="logloss",
+                tree_method="hist",
+                n_jobs=-1,
+                random_state=42,
+            )
+        ),
+    }
+
+
+# ======================================
+# MAIN TRAINING FUNCTION
+# ======================================
+def train_and_track_models(
+    data_path=PROCESSED_DATA_FILE,
+):
+
+    logger.info("Training models with TimeSeriesSplit...")
+
+    # ======================================
+    # LOAD DATA
+    # ======================================
     df = pd.read_csv(data_path)
 
-    # Sort chronologically
-    df = df.sort_values(
-        ["Date", "Ticker"]
-    )
+    df["Date"] = pd.to_datetime(df["Date"])
 
-    # Encode Ticker
-    ticker_dummies = pd.get_dummies(
-        df["Ticker"],
-        prefix="Ticker",
-    )
+    df = df.sort_values(["Ticker", "Date"])
 
-    df = pd.concat(
-        [df, ticker_dummies],
-        axis=1,
-    )
+    logger.info(f"Dataset rows: {len(df)}")
 
-    
-    # Features
-    base_features = [
+    # ======================================
+    # FEATURE LIST
+    # ======================================
+    features = [
+        # Core features
         "Return",
         "MA_5",
         "MA_10",
@@ -88,245 +201,268 @@ def train_model(data_path=PROCESSED_DATA_FILE,):
         "MACD",
         "BB_upper",
         "BB_lower",
+        # Market context
+        "SPY_Return",
+        "SPY_MA_5",
+        "SPY_Volatility",
+        "QQQ_Return",
+        "QQQ_Momentum",
+        "QQQ_MA_10",
+        "VIX_Return",
+        "VIX_MA_5",
+        "VIX_Level",
+        "High_VIX_Regime",
+        "Relative_SPY_Strength",
+        "Relative_QQQ_Strength",
+        "Market_Stress",
+        # Ticker dummies
+        "Ticker_AAPL",
+        "Ticker_AMD",
+        "Ticker_AMZN",
+        "Ticker_GOOGL",
+        "Ticker_INTC",
+        "Ticker_META",
+        "Ticker_MSFT",
+        "Ticker_NFLX",
+        "Ticker_NVDA",
+        "Ticker_TSLA",
     ]
 
-    ticker_features = list(
-        ticker_dummies.columns
+    # ======================================
+    # PREPARE FEATURES
+    # ======================================
+    X = prepare_features(
+        df,
+        features,
     )
-
-    features = (
-        base_features
-        + ticker_features
-    )
-
-    X = df[features]
 
     y = df["Target"]
 
-    
-    # Chronological Split
-    split_index = int(len(df) * 0.8)
+    logger.info(f"Using {len(features)} features")
 
-    X_train = X.iloc[:split_index]
+    # ======================================
+    # MLFLOW SETUP
+    # ======================================
+    mlflow.set_tracking_uri(f"sqlite:///{PROJECT_ROOT / 'mlflow.db'}")
 
-    X_test = X.iloc[split_index:]
+    mlflow.set_experiment("mlops-stock-prediction")
 
-    y_train = y.iloc[:split_index]
+    # ======================================
+    # TIMESERIES CV
+    # ======================================
+    tscv = TimeSeriesSplit(n_splits=5)
 
-    y_test = y.iloc[split_index:]
+    models = build_models()
 
-    logger.info(
-        f"Training rows: {len(X_train)}"
-    )
-
-    logger.info(
-        f"Testing rows: {len(X_test)}"
-    )
-
-    
-    # MLflow Setup
-    mlflow.set_tracking_uri(
-        f"sqlite:///{PROJECT_ROOT / 'mlflow.db'}"
-    )
-
-    mlflow.set_experiment(
-        "mlops-stock-prediction"
-    )
-
-    
-    # Models
-    models = {
-
-        "LogisticRegression": Pipeline([
-            (
-                "scaler",
-                StandardScaler(),
-            ),
-            (
-                "model",
-                LogisticRegression(
-                    max_iter=1000,
-                    class_weight="balanced",
-                    random_state=42,
-                ),
-            ),
-        ]),
-
-        "RandomForest": RandomForestClassifier(
-            n_estimators=300,
-            max_depth=10,
-            class_weight="balanced",
-            random_state=42,
-        ),
-
-        "ExtraTrees": ExtraTreesClassifier(
-            n_estimators=500,
-            min_samples_leaf=2,
-            class_weight="balanced",
-            random_state=42,
-        ),
-
-        "XGBoost": XGBClassifier(
-            n_estimators=400,
-            max_depth=8,
-            learning_rate=0.03,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            eval_metric="logloss",
-            random_state=42,
-        ),
-    }
-
-    
-    # Best Model Tracking
+    # ======================================
+    # BEST MODEL TRACKING
+    # ======================================
     best_model = None
-
-    best_metrics = None
-
-    best_score = 0
 
     best_model_name = ""
 
-    
-    # Train + Compare
-    for model_name, model in models.items():
+    best_threshold = 0.5
 
-        with mlflow.start_run(
-            run_name=model_name
-        ):
+    best_score = 0
 
-            logger.info(
-                f"Training {model_name}"
-            )
+    best_metrics = {}
 
-            # Train
-            model.fit(
-                X_train,
-                y_train,
-            )
+    # ======================================
+    # TRAINING LOOP
+    # ======================================
+    for (
+        model_name,
+        model,
+    ) in models.items():
+        with mlflow.start_run(run_name=model_name):
+            logger.info(f"\nTraining {model_name}")
 
-            # Predict
-            y_pred = model.predict(
-                X_test
-            )
+            fold_scores = []
 
-            # Metrics
-            metrics = (
-                evaluate_classification_model(
-                    y_test,
-                    y_pred,
+            fold_thresholds = []
+
+            final_y_test = None
+
+            final_y_pred = None
+
+            # ======================================
+            # WALK-FORWARD VALIDATION
+            # ======================================
+            for (
+                fold,
+                (
+                    train_idx,
+                    test_idx,
+                ),
+            ) in enumerate(tscv.split(X)):
+                logger.info(f"{model_name} - Fold {fold + 1}")
+
+                X_train = X.iloc[train_idx]
+
+                X_test = X.iloc[test_idx]
+
+                y_train = y.iloc[train_idx]
+
+                y_test = y.iloc[test_idx]
+
+                # TRAIN
+                model.fit(
+                    X_train,
+                    y_train,
                 )
+
+                # PREDICT PROBA
+                y_prob = model.predict_proba(X_test)[:, 1]
+
+                # OPTIMIZE THRESHOLD
+                threshold, fold_f1 = optimize_threshold(
+                    y_test,
+                    y_prob,
+                )
+
+                y_pred = (y_prob >= threshold).astype(int)
+
+                fold_scores.append(fold_f1)
+
+                fold_thresholds.append(threshold)
+
+                logger.info(f"Fold {fold + 1} F1: {fold_f1:.4f}")
+
+                # SAVE LAST FOLD
+                final_y_test = y_test
+
+                final_y_pred = y_pred
+
+            # ======================================
+            # FINAL METRICS
+            # ======================================
+            avg_f1 = np.mean(fold_scores)
+
+            avg_threshold = np.mean(fold_thresholds)
+
+            precision = precision_score(
+                final_y_test,
+                final_y_pred,
+                zero_division=0,
             )
 
-            score = metrics["f1_score"]
-
-            logger.info(
-                f"{model_name} "
-                f"F1 Score: {score:.4f}"
+            recall = recall_score(
+                final_y_test,
+                final_y_pred,
+                zero_division=0,
             )
 
-            
-            # MLflow Logging
+            logger.info(f"{model_name} Average F1: {avg_f1:.4f}")
+
+            # ======================================
+            # MLFLOW LOGGING
+            # ======================================
             mlflow.log_param(
                 "model_type",
                 model_name,
             )
 
             mlflow.log_metric(
-                "f1_score",
-                score,
+                "avg_f1_score",
+                avg_f1,
             )
 
-            for (
-                metric_name,
-                metric_value,
-            ) in metrics.items():
+            mlflow.log_metric(
+                "precision",
+                precision,
+            )
 
-                mlflow.log_metric(
-                    metric_name,
-                    metric_value,
-                )
+            mlflow.log_metric(
+                "recall",
+                recall,
+            )
 
-            
-            # Feature Importance
-            if hasattr(
+            mlflow.log_metric(
+                "optimal_threshold",
+                avg_threshold,
+            )
+
+            # ======================================
+            # FEATURE IMPORTANCE
+            # ======================================
+            actual_model = model
+
+            if isinstance(
                 model,
+                Pipeline,
+            ):
+                actual_model = model.named_steps["model"]
+
+            if hasattr(
+                actual_model,
                 "feature_importances_",
             ):
-
-                importance_df = (
-                    pd.DataFrame({
+                importance_df = pd.DataFrame(
+                    {
                         "feature": features,
-                        "importance": (
-                            model.feature_importances_
-                        ),
-                    })
-                    .sort_values(
-                        by="importance",
-                        ascending=False,
-                    )
+                        "importance": actual_model.feature_importances_,
+                    }
+                ).sort_values(
+                    by="importance",
+                    ascending=False,
                 )
 
-                logger.info(
-                    f"\nFeature Importance "
-                    f"for {model_name}:\n"
-                    f"{importance_df.head(15)}"
-                )
+                logger.info(f"\nTop Features:\n{importance_df.head(15)}")
 
-            
-            # Confusion Matrix
+            # ======================================
+            # CONFUSION MATRIX
+            # ======================================
             os.makedirs(
-                FIGURES_DIR,
+                REPORTS_FIGURES_DIR,
                 exist_ok=True,
             )
 
-            fig_path = (
-                FIGURES_DIR
-                / f"{model_name}_cm.png"
-            )
+            fig_path = REPORTS_FIGURES_DIR / f"{model_name}_cm.png"
 
             ConfusionMatrixDisplay.from_predictions(
-                y_test,
-                y_pred,
+                final_y_test,
+                final_y_pred,
             )
 
             plt.savefig(fig_path)
 
             plt.close()
 
-            mlflow.log_artifact(
-                fig_path
-            )
+            mlflow.log_artifact(fig_path)
 
-            
-            # Log Model
+            # ======================================
+            # LOG MODEL
+            # ======================================
             mlflow.sklearn.log_model(
                 sk_model=model,
                 name=model_name,
             )
 
-            
-            # Best Model Selection
-            if score > best_score:
-
-                best_score = score
+            # ======================================
+            # BEST MODEL
+            # ======================================
+            if avg_f1 > best_score:
+                best_score = avg_f1
 
                 best_model = model
 
-                best_metrics = metrics
-
                 best_model_name = model_name
 
-    
-    # Save Best Model
-    logger.info(
-        f"Best model: {best_model_name}"
-    )
+                best_threshold = avg_threshold
 
-    logger.info(
-        f"Best F1 Score: "
-        f"{best_score:.4f}"
-    )
+                best_metrics = {
+                    "f1_score": avg_f1,
+                    "precision": precision,
+                    "recall": recall,
+                    "threshold": avg_threshold,
+                }
+
+    # ======================================
+    # SAVE BEST MODEL
+    # ======================================
+    logger.info(f"\nBest Model: {best_model_name}")
+
+    logger.info(f"Best Average F1: {best_score:.4f}")
 
     os.makedirs(
         MODEL_DIR,
@@ -334,19 +470,21 @@ def train_model(data_path=PROCESSED_DATA_FILE,):
     )
 
     joblib.dump(
-        best_model,
+        {
+            "model": best_model,
+            "model_name": best_model_name,
+            "threshold": best_threshold,
+            "features": features,
+        },
         MODEL_FILE,
     )
 
-    logger.info(
-        f"Best model saved to "
-        f"{MODEL_FILE}"
-    )
+    logger.info(f"Best model saved to {MODEL_FILE}")
 
-    
-    # Track with DVC
+    # ======================================
+    # DVC TRACKING
+    # ======================================
     try:
-
         subprocess.run(
             [
                 sys.executable,
@@ -358,20 +496,29 @@ def train_model(data_path=PROCESSED_DATA_FILE,):
             check=True,
         )
 
-        logger.info(
-            "Model tracked with DVC"
-        )
+        logger.info("Model tracked with DVC")
 
     except Exception as e:
+        logger.warning(f"DVC tracking failed: {str(e)}")
 
-        logger.warning(
-            f"DVC tracking failed: "
-            f"{str(e)}"
-        )
-
-    return best_model, best_metrics
+    return (
+        best_model,
+        best_metrics,
+    )
 
 
+# ======================================
+# BACKWARD COMPATIBILITY
+# ======================================
+def train_model(
+    data_path=PROCESSED_DATA_FILE,
+):
+
+    return train_and_track_models(data_path)
+
+
+# ======================================
+# MAIN
+# ======================================
 if __name__ == "__main__":
-
-    train_model()
+    train_and_track_models()

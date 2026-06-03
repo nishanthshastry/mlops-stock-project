@@ -14,7 +14,7 @@ on:
       - dev
 
 jobs:
-  lint-and-test:
+  lint-test-build:
     runs-on: ubuntu-latest
 
     strategy:
@@ -22,27 +22,28 @@ jobs:
         python-version: ["3.11"]
 
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
       PYTHONPATH: src
+
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip dependencies
+      - name: Cache pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-python-${{ matrix.python-version }}-pip-
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
 
       - name: Install Dependencies
         run: |
@@ -50,7 +51,7 @@ jobs:
           pip install "dvc[s3]"
           pip install -r requirements.txt
 
-      - name: Verify DVC Installation
+      - name: Verify DVC
         run: |
           dvc version
 
@@ -58,23 +59,22 @@ jobs:
         run: |
           dvc pull
 
-      - name: Verify Imports
+      - name: Verify Critical Imports
         run: |
           python -c "from mlops_stock_project.api.app import app"
-          python -c "from mlops_stock_project.models.train_model import train_model"
+          python -c "from mlops_stock_project.models.train_model import train_and_track_models"
           python -c "from mlops_stock_project.monitoring.drift import detect_drift"
+          python -c "from mlops_stock_project.features.feature_pipeline import prepare_features"
 
-      - name: Lint with Ruff
+      - name: Run CI Checks
         run: |
-          ruff check .
+          make ci
 
-      - name: Format Check with Black
+      - name: Verify Simulations
         run: |
-          black --check .
-
-      - name: Run Tests with pytest
-        run: |
-          pytest -v
+          python -m mlops_stock_project.models.simulate_baseline
+          python -m mlops_stock_project.models.simulate_retraining
+          python -m mlops_stock_project.models.simulate_drift_retraining
 
       - name: Build Docker Image
         run: |
@@ -86,6 +86,6 @@ jobs:
         run: |
           docker images
 
-      - name: CI Pipeline Completed
+      - name: CI Completed
         run: |
-          echo "MLOps CI Pipeline completed successfully."
+          echo "CI pipeline completed successfully."
