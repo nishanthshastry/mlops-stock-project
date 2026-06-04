@@ -9,6 +9,9 @@ import mlflow.sklearn
 import pandas as pd
 import numpy as np
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from sklearn.pipeline import Pipeline
@@ -58,9 +61,9 @@ from mlops_stock_project.logging_config import (
 logger = get_logger(__name__)
 
 
-# ======================================
 # THRESHOLD OPTIMIZATION
-# ======================================
+
+
 def optimize_threshold(
     y_true,
     y_prob,
@@ -96,9 +99,9 @@ def optimize_threshold(
     )
 
 
-# ======================================
 # MODEL DEFINITIONS
-# ======================================
+
+
 def build_models():
 
     return {
@@ -121,7 +124,7 @@ def build_models():
         ),
         "RandomForest": (
             RandomForestClassifier(
-                n_estimators=500,
+                n_estimators=200,
                 max_depth=12,
                 min_samples_leaf=3,
                 min_samples_split=5,
@@ -132,7 +135,7 @@ def build_models():
         ),
         "ExtraTrees": (
             ExtraTreesClassifier(
-                n_estimators=700,
+                n_estimators=250,
                 max_depth=14,
                 min_samples_leaf=2,
                 min_samples_split=4,
@@ -143,8 +146,8 @@ def build_models():
         ),
         "XGBoost": (
             XGBClassifier(
-                n_estimators=700,
-                max_depth=10,
+                n_estimators=250,
+                max_depth=8,
                 learning_rate=0.02,
                 subsample=0.85,
                 colsample_bytree=0.85,
@@ -161,18 +164,17 @@ def build_models():
     }
 
 
-# ======================================
 # MAIN TRAINING FUNCTION
-# ======================================
+
+
 def train_and_track_models(
     data_path=PROCESSED_DATA_FILE,
 ):
 
     logger.info("Training models with TimeSeriesSplit...")
 
-    # ======================================
     # LOAD DATA
-    # ======================================
+
     df = pd.read_csv(data_path)
 
     df["Date"] = pd.to_datetime(df["Date"])
@@ -181,9 +183,8 @@ def train_and_track_models(
 
     logger.info(f"Dataset rows: {len(df)}")
 
-    # ======================================
     # FEATURE LIST
-    # ======================================
+
     features = [
         # Core features
         "Return",
@@ -228,9 +229,8 @@ def train_and_track_models(
         "Ticker_TSLA",
     ]
 
-    # ======================================
     # PREPARE FEATURES
-    # ======================================
+
     X = prepare_features(
         df,
         features,
@@ -240,23 +240,22 @@ def train_and_track_models(
 
     logger.info(f"Using {len(features)} features")
 
-    # ======================================
     # MLFLOW SETUP
-    # ======================================
+
     mlflow.set_tracking_uri(f"sqlite:///{PROJECT_ROOT / 'mlflow.db'}")
 
     mlflow.set_experiment("mlops-stock-prediction")
 
-    # ======================================
     # TIMESERIES CV
-    # ======================================
-    tscv = TimeSeriesSplit(n_splits=5)
+
+    tscv = TimeSeriesSplit(
+        n_splits=3,
+    )
 
     models = build_models()
 
-    # ======================================
     # BEST MODEL TRACKING
-    # ======================================
+
     best_model = None
 
     best_model_name = ""
@@ -267,9 +266,8 @@ def train_and_track_models(
 
     best_metrics = {}
 
-    # ======================================
     # TRAINING LOOP
-    # ======================================
+
     for (
         model_name,
         model,
@@ -285,9 +283,8 @@ def train_and_track_models(
 
             final_y_pred = None
 
-            # ======================================
             # WALK-FORWARD VALIDATION
-            # ======================================
+
             for (
                 fold,
                 (
@@ -333,9 +330,8 @@ def train_and_track_models(
 
                 final_y_pred = y_pred
 
-            # ======================================
             # FINAL METRICS
-            # ======================================
+
             avg_f1 = np.mean(fold_scores)
 
             avg_threshold = np.mean(fold_thresholds)
@@ -354,9 +350,8 @@ def train_and_track_models(
 
             logger.info(f"{model_name} Average F1: {avg_f1:.4f}")
 
-            # ======================================
             # MLFLOW LOGGING
-            # ======================================
+
             mlflow.log_param(
                 "model_type",
                 model_name,
@@ -382,9 +377,8 @@ def train_and_track_models(
                 avg_threshold,
             )
 
-            # ======================================
             # FEATURE IMPORTANCE
-            # ======================================
+
             actual_model = model
 
             if isinstance(
@@ -409,9 +403,8 @@ def train_and_track_models(
 
                 logger.info(f"\nTop Features:\n{importance_df.head(15)}")
 
-            # ======================================
             # CONFUSION MATRIX
-            # ======================================
+
             os.makedirs(
                 REPORTS_FIGURES_DIR,
                 exist_ok=True,
@@ -430,17 +423,15 @@ def train_and_track_models(
 
             mlflow.log_artifact(fig_path)
 
-            # ======================================
             # LOG MODEL
-            # ======================================
+
             mlflow.sklearn.log_model(
                 sk_model=model,
                 name=model_name,
             )
 
-            # ======================================
             # BEST MODEL
-            # ======================================
+
             if avg_f1 > best_score:
                 best_score = avg_f1
 
@@ -451,15 +442,16 @@ def train_and_track_models(
                 best_threshold = avg_threshold
 
                 best_metrics = {
-                    "f1_score": avg_f1,
-                    "precision": precision,
-                    "recall": recall,
-                    "threshold": avg_threshold,
+                    "f1_score": 0.0 if np.isnan(avg_f1) else float(avg_f1),
+                    "precision": 0.0 if np.isnan(precision) else float(precision),
+                    "recall": 0.0 if np.isnan(recall) else float(recall),
+                    "threshold": (
+                        0.5 if np.isnan(avg_threshold) else float(avg_threshold)
+                    ),
                 }
 
-    # ======================================
     # SAVE BEST MODEL
-    # ======================================
+
     logger.info(f"\nBest Model: {best_model_name}")
 
     logger.info(f"Best Average F1: {best_score:.4f}")
@@ -481,9 +473,8 @@ def train_and_track_models(
 
     logger.info(f"Best model saved to {MODEL_FILE}")
 
-    # ======================================
     # DVC TRACKING
-    # ======================================
+
     try:
         subprocess.run(
             [
@@ -507,9 +498,9 @@ def train_and_track_models(
     )
 
 
-# ======================================
 # BACKWARD COMPATIBILITY
-# ======================================
+
+
 def train_model(
     data_path=PROCESSED_DATA_FILE,
 ):
@@ -517,8 +508,7 @@ def train_model(
     return train_and_track_models(data_path)
 
 
-# ======================================
 # MAIN
-# ======================================
+
 if __name__ == "__main__":
     train_and_track_models()

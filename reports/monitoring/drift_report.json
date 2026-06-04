@@ -7,13 +7,13 @@
     ],
     "feature_results": {
         "Return": {
-            "psi_score": 0.1801,
+            "psi_score": 0.1804,
             "ks_pvalue": 0.0,
             "severity": "moderate",
             "drift_detected": false
         },
         "Volatility": {
-            "psi_score": 0.5543,
+            "psi_score": 0.5537,
             "ks_pvalue": 0.0,
             "severity": "significant",
             "drift_detected": true
@@ -49,7 +49,7 @@
             "drift_detected": false
         },
         "Relative_SPY_Strength": {
-            "psi_score": 0.2829,
+            "psi_score": 0.283,
             "ks_pvalue": 0.0,
             "severity": "significant",
             "drift_detected": true

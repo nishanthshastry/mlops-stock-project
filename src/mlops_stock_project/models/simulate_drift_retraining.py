@@ -27,21 +27,26 @@ from mlops_stock_project.models.simulate_utils import (
 logger = get_logger(__name__)
 
 
-# DRIFT RETRAINING
+# DRIFT-TRIGGERED RETRAINING
 
 
 def simulate_drift_retraining(
     data_path=PROCESSED_DATA_FILE,
 ):
-
     logger.info("Running drift-triggered retraining simulation...")
 
     # LOAD DATA
+
     df = pd.read_csv(data_path)
 
     df["Date"] = pd.to_datetime(df["Date"])
 
-    df = df.sort_values(["Ticker", "Date"])
+    df = df.sort_values(
+        [
+            "Ticker",
+            "Date",
+        ]
+    )
 
     artifact = load_model_artifact()
 
@@ -60,7 +65,9 @@ def simulate_drift_retraining(
 
     y_train = train_data["Target"]
 
-    model = create_xgboost_model()
+    model = create_xgboost_model(
+        fast_mode=True,
+    )
 
     model.fit(
         X_train,
@@ -68,9 +75,10 @@ def simulate_drift_retraining(
     )
 
     # CONFIG
-    window_size = 250
 
-    drift_check_interval = 250
+    window_size = 500
+
+    drift_check_interval = 1000
 
     f1_scores = []
 
@@ -82,33 +90,51 @@ def simulate_drift_retraining(
 
     drift_events = []
 
-    # ROLLING LOOP
+    logger.info(f"Evaluating {len(test_data)} test rows in chunks of {window_size}")
+
+    # FAST LOOP
+
     for i in range(
         window_size,
         len(test_data),
+        window_size,
     ):
         # DRIFT CHECK
+
         if i % drift_check_interval == 0:
             historical_window = test_data.iloc[
-                max(0, i - drift_check_interval) : i
-            ].copy()
+                max(
+                    0,
+                    i - drift_check_interval,
+                ) : i
+            ]
 
             current_window = test_data.iloc[
-                i : min(i + drift_check_interval, len(test_data))
-            ].copy()
+                i : min(
+                    i + drift_check_interval,
+                    len(test_data),
+                )
+            ]
 
             if len(historical_window) > 50 and len(current_window) > 50:
-                drift_detected = detect_drift(
+                drift_result = detect_drift(
                     historical_window,
                     current_window,
                 )
+
+                drift_detected = drift_result["overall_drift_detected"]
 
                 if drift_detected:
                     logger.info(f"Drift detected at step {i}")
 
                     drift_events.append(i)
 
-                    retrain_data = pd.concat([train_data, test_data.iloc[:i]]).copy()
+                    retrain_data = pd.concat(
+                        [
+                            train_data,
+                            test_data.iloc[:i],
+                        ]
+                    )
 
                     X_retrain = prepare_features(
                         retrain_data,
@@ -123,16 +149,17 @@ def simulate_drift_retraining(
                     )
 
         # EVALUATE
-        window = test_data.iloc[:i].copy()
 
-        X_window = prepare_features(
-            window,
+        evaluation_df = test_data.iloc[:i]
+
+        X_eval = prepare_features(
+            evaluation_df,
             features,
         )
 
-        y_true = window["Target"]
+        y_true = evaluation_df["Target"]
 
-        y_pred = model.predict(X_window)
+        y_pred = model.predict(X_eval)
 
         metrics = compute_classification_metrics(
             y_true,
@@ -147,11 +174,15 @@ def simulate_drift_retraining(
 
         evaluation_steps.append(i)
 
-    logger.info(f"Final F1: {f1_scores[-1]:.4f}")
+        logger.info(f"Step={i} | F1={metrics['f1']:.4f}")
+
+    if len(f1_scores) > 0:
+        logger.info(f"Final F1: {f1_scores[-1]:.4f}")
 
     logger.info(f"Total Drift Events: {len(drift_events)}")
 
     # PLOT
+
     output_file = REPORTS_FIGURES_DIR / "drift_retraining_performance.png"
 
     plot_simulation_metrics(
@@ -164,7 +195,7 @@ def simulate_drift_retraining(
         vertical_markers=drift_events,
     )
 
-    logger.info("Drift retraining simulation completed")
+    logger.info("Drift retraining simulation completed.")
 
 
 if __name__ == "__main__":

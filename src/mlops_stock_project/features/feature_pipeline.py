@@ -108,7 +108,7 @@ def prepare_features(
     feature preparation pipeline.
     """
 
-    logger.info("Preparing feature matrix...")
+    logger.debug("Preparing feature matrix...")
 
     # Recreate ticker dummies
     df = recreate_ticker_dummies(df)
@@ -128,6 +128,6 @@ def prepare_features(
     # Numeric conversion
     X = convert_numeric_features(X)
 
-    logger.info(f"Prepared feature matrix: {X.shape}")
+    logger.debug(f"Prepared feature matrix: {X.shape}")
 
     return X

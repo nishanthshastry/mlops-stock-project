@@ -1,4 +1,7 @@
 import joblib
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from sklearn.metrics import (
@@ -24,7 +27,6 @@ logger = get_logger(__name__)
 
 
 def load_model_artifact():
-
     artifact = joblib.load(MODEL_FILE)
 
     return {
@@ -44,7 +46,28 @@ def load_model_artifact():
 # CREATE XGBOOST MODEL
 
 
-def create_xgboost_model():
+def create_xgboost_model(
+    fast_mode=True,
+):
+    """
+    fast_mode=True:
+        Used for simulations and CI/CD.
+
+    fast_mode=False:
+        Used for research-quality experiments.
+    """
+
+    if fast_mode:
+        return XGBClassifier(
+            n_estimators=100,
+            max_depth=4,
+            learning_rate=0.05,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            eval_metric="logloss",
+            random_state=42,
+            n_jobs=-1,
+        )
 
     return XGBClassifier(
         n_estimators=300,
@@ -54,6 +77,7 @@ def create_xgboost_model():
         colsample_bytree=0.8,
         eval_metric="logloss",
         random_state=42,
+        n_jobs=-1,
     )
 
 
@@ -64,29 +88,22 @@ def compute_classification_metrics(
     y_true,
     y_pred,
 ):
-
-    f1 = f1_score(
-        y_true,
-        y_pred,
-        zero_division=0,
-    )
-
-    precision = precision_score(
-        y_true,
-        y_pred,
-        zero_division=0,
-    )
-
-    recall = recall_score(
-        y_true,
-        y_pred,
-        zero_division=0,
-    )
-
     return {
-        "f1": f1,
-        "precision": precision,
-        "recall": recall,
+        "f1": f1_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        ),
+        "precision": precision_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        ),
+        "recall": recall_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        ),
     }
 
 
@@ -102,8 +119,9 @@ def plot_simulation_metrics(
     title,
     vertical_markers=None,
 ):
-
-    plt.figure(figsize=(12, 6))
+    plt.figure(
+        figsize=(12, 6),
+    )
 
     plt.plot(
         evaluation_steps,
@@ -123,7 +141,6 @@ def plot_simulation_metrics(
         label="Recall",
     )
 
-    # Optional markers
     if vertical_markers:
         for marker in vertical_markers:
             plt.axvline(
@@ -142,9 +159,10 @@ def plot_simulation_metrics(
 
     plt.grid(True)
 
+    plt.tight_layout()
+
     plt.savefig(
         output_file,
-        bbox_inches="tight",
         dpi=300,
     )
 

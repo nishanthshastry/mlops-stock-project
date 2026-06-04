@@ -2,6 +2,9 @@ import joblib
 import shap
 import pandas as pd
 import numpy as np
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from sklearn.pipeline import Pipeline
@@ -12,6 +15,10 @@ from mlops_stock_project.config import (
     PROJECT_ROOT,
 )
 
+from mlops_stock_project.features.feature_pipeline import (
+    prepare_features,
+)
+
 from mlops_stock_project.logging_config import (
     get_logger,
 )
@@ -19,6 +26,7 @@ from mlops_stock_project.logging_config import (
 logger = get_logger(__name__)
 
 # REPORT PATHS
+
 FIGURES_DIR = PROJECT_ROOT / "reports" / "figures"
 
 FIGURES_DIR.mkdir(
@@ -28,10 +36,11 @@ FIGURES_DIR.mkdir(
 
 
 # MAIN SHAP ANALYSIS
-def run_shap_analysis(
-    sample_size=2000,
-):
 
+
+def run_shap_analysis(
+    sample_size=1000,
+):
     logger.info("Starting SHAP analysis...")
 
     # LOAD MODEL ARTIFACT
@@ -57,64 +66,14 @@ def run_shap_analysis(
 
     logger.info(f"Loaded dataset shape: {df.shape}")
 
-    # RECREATE TICKER DUMMIES
+    # USE CENTRALIZED FEATURE PIPELINE
 
-    if "Ticker" in df.columns:
-        logger.info("Recreating ticker dummy variables...")
-
-        ticker_dummies = pd.get_dummies(
-            df["Ticker"],
-            prefix="Ticker",
-        )
-
-        df = pd.concat(
-            [df, ticker_dummies],
-            axis=1,
-        )
-
-    # ENSURE FEATURE CONSISTENCY
-
-    missing_features = [feature for feature in features if feature not in df.columns]
-
-    if missing_features:
-        logger.warning(f"Missing features detected: {missing_features}")
-
-        logger.warning("Adding missing features with zero values...")
-
-        for feature in missing_features:
-            df[feature] = 0
-
-    # FINAL FEATURE MATRIX
-
-    X = df[features].copy()
-
-    # Convert booleans to integers
-    bool_columns = X.select_dtypes(include=["bool"]).columns
-
-    if len(bool_columns) > 0:
-        X[bool_columns] = X[bool_columns].astype(int)
-
-    # Force numeric conversion
-    X = X.apply(
-        pd.to_numeric,
-        errors="coerce",
+    X = prepare_features(
+        df,
+        features,
     )
-
-    # Replace infinities
-    X = X.replace(
-        [np.inf, -np.inf],
-        np.nan,
-    )
-
-    # Fill missing values
-    X = X.fillna(0)
-
-    # Convert everything to float32
-    X = X.astype("float32")
 
     logger.info(f"Final SHAP feature matrix: {X.shape}")
-
-    logger.info(f"Feature dtype summary:\n{X.dtypes.value_counts()}")
 
     # SAMPLE DATA
 
@@ -123,7 +82,6 @@ def run_shap_analysis(
             sample_size,
             random_state=42,
         )
-
     else:
         X_sample = X.copy()
 
@@ -148,13 +106,12 @@ def run_shap_analysis(
     else:
         X_transformed = X_sample
 
-    # Final numeric enforcement
-    X_transformed = np.array(
+    X_transformed = np.asarray(
         X_transformed,
         dtype=np.float32,
     )
 
-    # CREATE SHAP EXPLAINER
+    # BUILD EXPLAINER
 
     logger.info("Building SHAP TreeExplainer...")
 
@@ -164,7 +121,7 @@ def run_shap_analysis(
 
     logger.info("SHAP values generated")
 
-    # SHAP SUMMARY PLOT
+    # SUMMARY PLOT
 
     logger.info("Generating SHAP summary plot...")
 
@@ -190,7 +147,7 @@ def run_shap_analysis(
 
     logger.info(f"Saved SHAP summary plot to {summary_path}")
 
-    # SHAP BAR PLOT
+    # BAR PLOT
 
     logger.info("Generating SHAP bar plot...")
 
@@ -223,7 +180,7 @@ def run_shap_analysis(
     importance_df = pd.DataFrame(
         {
             "feature": features,
-            "importance": (np.abs(shap_values).mean(axis=0)),
+            "importance": np.abs(shap_values).mean(axis=0),
         }
     )
 
@@ -233,8 +190,6 @@ def run_shap_analysis(
     )
 
     logger.info(f"\nTop SHAP Features:\n{importance_df.head(15)}")
-
-    # SAVE FEATURE IMPORTANCE
 
     importance_csv = FIGURES_DIR / "shap_feature_importance.csv"
 

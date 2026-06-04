@@ -335,9 +335,17 @@ def retrain():
         # Reload updated model
         load_model()
 
+        print(result)
+
         return {
-            "status": "retraining_completed",
-            "details": result,
+            "success": True,
+            "model_name": result["current_model"],
+            "drift_detected": result["drift_detected"],
+            "retraining_triggered": result["retraining_triggered"],
+            "f1_score": result["retraining_result"]["f1_score"].__round__(4),
+            "precision": result["retraining_result"]["precision"].__round__(4),
+            "recall": result["retraining_result"]["recall"].__round__(4),
+            "threshold": result["retraining_result"]["threshold"],
         }
 
     except Exception as e:

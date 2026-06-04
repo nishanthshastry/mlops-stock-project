@@ -29,15 +29,20 @@ logger = get_logger(__name__)
 def simulate_retraining(
     data_path=PROCESSED_DATA_FILE,
 ):
-
     logger.info("Running scheduled retraining simulation...")
 
     # LOAD DATA
+
     df = pd.read_csv(data_path)
 
     df["Date"] = pd.to_datetime(df["Date"])
 
-    df = df.sort_values(["Ticker", "Date"])
+    df = df.sort_values(
+        [
+            "Ticker",
+            "Date",
+        ]
+    )
 
     artifact = load_model_artifact()
 
@@ -56,7 +61,9 @@ def simulate_retraining(
 
     y_train = train_data["Target"]
 
-    model = create_xgboost_model()
+    model = create_xgboost_model(
+        fast_mode=True,
+    )
 
     model.fit(
         X_train,
@@ -64,9 +71,10 @@ def simulate_retraining(
     )
 
     # CONFIG
-    window_size = 250
 
-    retrain_interval = 500
+    window_size = 500
+
+    retrain_interval = 1000
 
     f1_scores = []
 
@@ -78,16 +86,26 @@ def simulate_retraining(
 
     retrain_points = []
 
-    # ROLLING LOOP
+    logger.info(f"Evaluating {len(test_data)} test rows in chunks of {window_size}")
+
+    # FAST EVALUATION LOOP
+
     for i in range(
         window_size,
         len(test_data),
+        window_size,
     ):
         # RETRAIN
-        if i % retrain_interval == 0:
-            logger.info(f"Retraining at step {i}")
 
-            retrain_data = pd.concat([train_data, test_data.iloc[:i]]).copy()
+        if i % retrain_interval == 0:
+            logger.info(f"Retraining model at step {i}")
+
+            retrain_data = pd.concat(
+                [
+                    train_data,
+                    test_data.iloc[:i],
+                ]
+            )
 
             X_retrain = prepare_features(
                 retrain_data,
@@ -104,16 +122,17 @@ def simulate_retraining(
             retrain_points.append(i)
 
         # EVALUATE
-        window = test_data.iloc[:i].copy()
 
-        X_window = prepare_features(
-            window,
+        evaluation_df = test_data.iloc[:i]
+
+        X_eval = prepare_features(
+            evaluation_df,
             features,
         )
 
-        y_true = window["Target"]
+        y_true = evaluation_df["Target"]
 
-        y_pred = model.predict(X_window)
+        y_pred = model.predict(X_eval)
 
         metrics = compute_classification_metrics(
             y_true,
@@ -128,9 +147,13 @@ def simulate_retraining(
 
         evaluation_steps.append(i)
 
-    logger.info(f"Final F1: {f1_scores[-1]:.4f}")
+        logger.info(f"Step={i} | F1={metrics['f1']:.4f}")
+
+    if len(f1_scores) > 0:
+        logger.info(f"Final F1: {f1_scores[-1]:.4f}")
 
     # PLOT
+
     output_file = REPORTS_FIGURES_DIR / "scheduled_retraining_performance.png"
 
     plot_simulation_metrics(
@@ -143,7 +166,7 @@ def simulate_retraining(
         vertical_markers=retrain_points,
     )
 
-    logger.info("Scheduled retraining simulation completed")
+    logger.info("Scheduled retraining simulation completed.")
 
 
 if __name__ == "__main__":

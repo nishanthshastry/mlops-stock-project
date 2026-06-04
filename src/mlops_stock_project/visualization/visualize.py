@@ -1,4 +1,7 @@
 import os
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from mlops_stock_project.config import FIGURES_DIR

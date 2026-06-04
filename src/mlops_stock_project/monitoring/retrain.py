@@ -106,7 +106,9 @@ def retrain_if_drift_detected():
         logger.info(f"Backed up model to {backup_path}")
 
         # Retrain models
-        retraining_result = train_and_track_models()
+        best_model, best_metrics = train_and_track_models()
+
+        retraining_result = best_metrics
 
         logger.info("Retraining completed.")
 

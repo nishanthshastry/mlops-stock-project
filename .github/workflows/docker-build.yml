@@ -65,7 +65,10 @@ jobs:
 
       - name: Test Container Startup
         run: |
-          docker run -d -p 8000:8000 --name mlops-test $(docker images -q | head -n 1)
+          docker run -d \
+          -p 8000:8000 \
+          --name mlops-test \
+          nshastry00/mlops-stock-api:latest
 
           sleep 15
 

@@ -120,6 +120,10 @@ jobs:
           echo "## Docker" >> report.md
           echo "- DockerHub Repo: nshastry00/mlops-stock-api" >> report.md
 
+      - name: Save MLflow Information
+        run: |
+          mlflow --version >> report.md
+
       - name: Publish PR Comment
         if: github.event_name == 'pull_request'
         env:

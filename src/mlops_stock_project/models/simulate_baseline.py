@@ -1,3 +1,7 @@
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from mlops_stock_project.config import (
@@ -14,10 +18,8 @@ from mlops_stock_project.logging_config import (
 )
 
 from mlops_stock_project.models.simulate_utils import (
-    load_model_artifact,
-    create_xgboost_model,
     compute_classification_metrics,
-    plot_simulation_metrics,
+    load_model_artifact,
 )
 
 logger = get_logger(__name__)
@@ -29,7 +31,6 @@ logger = get_logger(__name__)
 def simulate_baseline(
     data_path=PROCESSED_DATA_FILE,
 ):
-
     logger.info("Running baseline simulation...")
 
     # LOAD DATA
@@ -39,97 +40,106 @@ def simulate_baseline(
 
     df = df.sort_values(["Ticker", "Date"])
 
-    logger.info(f"Loaded dataset shape: {df.shape}")
-
-    # LOAD ARTIFACT
+    # LOAD SAVED MODEL
     artifact = load_model_artifact()
+
+    model = artifact["model"]
 
     features = artifact["features"]
 
-    logger.info(f"Using {len(features)} features")
+    model_name = artifact.get(
+        "model_name",
+        "Unknown",
+    )
 
-    # SPLIT DATA
-    split_date = df["Date"].quantile(0.6)
+    logger.info(f"Loaded model: {model_name}")
 
-    train_data = df[df["Date"] < split_date].copy()
+    # HOLDOUT TEST PERIOD
+    test_data = df[df["Date"] >= df["Date"].quantile(0.6)].copy()
 
-    test_data = df[df["Date"] >= split_date].copy()
+    logger.info(f"Test dataset shape: {test_data.shape}")
 
-    # PREPARE FEATURES
-    X_train = prepare_features(
-        train_data,
+    # FEATURE MATRIX
+    X_test = prepare_features(
+        test_data,
         features,
     )
 
-    y_train = train_data["Target"]
+    y_true = test_data["Target"]
 
-    # TRAIN MODEL
-    model = create_xgboost_model()
+    logger.info("Generating predictions...")
 
-    model.fit(
-        X_train,
-        y_train,
+    y_pred = model.predict(X_test)
+
+    # METRICS
+    metrics = compute_classification_metrics(
+        y_true,
+        y_pred,
     )
 
-    # ROLLING EVALUATION
-    window_size = 250
+    logger.info(
+        "Baseline Results | "
+        f"F1={metrics['f1']:.4f} | "
+        f"Precision={metrics['precision']:.4f} | "
+        f"Recall={metrics['recall']:.4f}"
+    )
 
-    f1_scores = []
-
-    precision_scores = []
-
-    recall_scores = []
-
-    evaluation_steps = []
-
-    for i in range(
-        window_size,
-        len(test_data),
-    ):
-        window = test_data.iloc[:i].copy()
-
-        X_window = prepare_features(
-            window,
-            features,
-        )
-
-        y_true = window["Target"]
-
-        y_pred = model.predict(X_window)
-
-        metrics = compute_classification_metrics(
-            y_true,
-            y_pred,
-        )
-
-        f1_scores.append(metrics["f1"])
-
-        precision_scores.append(metrics["precision"])
-
-        recall_scores.append(metrics["recall"])
-
-        evaluation_steps.append(i)
-
-    # FINAL METRICS
-    logger.info(f"Final F1: {f1_scores[-1]:.4f}")
-
-    logger.info(f"Final Precision: {precision_scores[-1]:.4f}")
-
-    logger.info(f"Final Recall: {recall_scores[-1]:.4f}")
-
-    # PLOT
+    # VISUALIZATION
     output_file = REPORTS_FIGURES_DIR / "baseline_performance.png"
 
-    plot_simulation_metrics(
-        evaluation_steps=evaluation_steps,
-        f1_scores=f1_scores,
-        precision_scores=precision_scores,
-        recall_scores=recall_scores,
-        output_file=output_file,
-        title="Baseline Model Performance (No Retraining)",
+    metric_names = [
+        "F1",
+        "Precision",
+        "Recall",
+    ]
+
+    metric_values = [
+        metrics["f1"],
+        metrics["precision"],
+        metrics["recall"],
+    ]
+
+    plt.figure(figsize=(8, 5))
+
+    plt.bar(
+        metric_names,
+        metric_values,
     )
 
-    logger.info("Baseline simulation completed")
+    for index, value in enumerate(metric_values):
+        plt.text(
+            index,
+            value + 0.02,
+            f"{value:.3f}",
+            ha="center",
+        )
+
+    plt.ylim(0, 1)
+
+    plt.ylabel("Score")
+
+    plt.title("Baseline Model Performance")
+
+    plt.grid(
+        axis="y",
+        alpha=0.3,
+    )
+
+    plt.tight_layout()
+
+    plt.savefig(
+        output_file,
+        bbox_inches="tight",
+        dpi=300,
+    )
+
+    plt.close()
+
+    logger.info(f"Saved baseline performance plot to {output_file}")
+
+    logger.info("Baseline simulation completed.")
+
+    return metrics
 
 
 if __name__ == "__main__":
