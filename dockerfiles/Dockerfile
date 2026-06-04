@@ -27,15 +27,17 @@ RUN pip install --upgrade pip && \
 # Copy project files
 COPY . .
 
+# Copy startup script
+COPY entrypoint.sh /app/entrypoint.sh
+
+# Make startup script executable
+RUN chmod +x /app/entrypoint.sh
+
 # Set Python path
 ENV PYTHONPATH=src
-
-# Pull DVC artifacts during build (optional)
-# Uncomment only if AWS credentials are available during build
-# RUN dvc pull
 
 # Expose FastAPI port
 EXPOSE 8080
 
-# Run FastAPI app
-CMD ["sh", "-c", "uvicorn mlops_stock_project.api.app:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# Start container
+CMD ["/app/entrypoint.sh"]
