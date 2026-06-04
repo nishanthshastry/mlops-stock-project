@@ -224,7 +224,7 @@ mlruns/
 mlflow.db
 
 # DVC tracked artifacts
-models/*.pkl
+# models/*.pkl
 data/raw/*.csv
 data/processed/*.csv
 
