@@ -64,8 +64,8 @@ Provides basic API metadata and confirms that the trained model has been loaded 
 
 ## Screenshot
 
-![API Run Home](/reports/api/API-Run-Home.png)
-![API Run Home Response](/reports/api/API-Run-HomeResponse.png)
+![API Run Home](../reports/api/API-Run-Home.png)
+![API Run Home Response](../reports/api/API-Run-HomeResponse.png)
 
 ## Example Response
 
@@ -100,7 +100,7 @@ Verifies service health and model readiness.
 
 ## Screenshot
 
-![API Run Health](/reports/api/API-Run-Health.png)
+![API Run Health](../reports/api/API-Run-Health.png)
 
 ## Example Response
 
@@ -132,9 +132,9 @@ Accepts engineered stock market features and returns a prediction.
 
 ## Screenshots
 
-![API Run Home Predict 1](reports/api/API-Run-Predict1.png)
-![API Run Home Predict 2](reports/api/API-Run-Predict2.png)
-![API Run Home Predict Response](reports/api/API-Run-PredictResponse.png)
+![API Run Home Predict 1](../reports/api/API-Run-Predict1.png)
+![API Run Home Predict 2](../reports/api/API-Run-Predict2.png)
+![API Run Home Predict Response](../reports/api/API-Run-PredictResponse.png)
 
 ## Input Features
 
@@ -207,7 +207,7 @@ Simulates production monitoring by checking for drift and triggering model retra
 
 ## Screenshot
 
-![API Run Retrain](reports/api/API-Run-Retrain.png)
+![API Run Retrain](../reports/api/API-Run-Retrain.png)
 
 ## Example Response
 
