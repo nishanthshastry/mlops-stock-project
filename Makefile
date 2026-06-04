@@ -91,11 +91,11 @@ simulate-drift:
 
 # API
 run-api:
-	uvicorn mlops_stock_project.api.app:app \
-		--reload \
-		--host 0.0.0.0 \
-		--port 8000 \
-		--app-dir src
+    uvicorn mlops_stock_project.api.app:app \
+        --reload \
+        --host 0.0.0.0 \
+        --port 8080 \
+        --app-dir src
 
 
 # MLFLOW
@@ -143,7 +143,7 @@ docker-build:
 		-f dockerfiles/Dockerfile .
 
 docker-run:
-	docker run -p 8000:8000 mlops-stock-api
+    docker run -p 8080:8080 mlops-stock-api
 
 
 # FULL PIPELINES

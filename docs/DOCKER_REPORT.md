@@ -448,15 +448,15 @@ These benefits align closely with modern MLOps deployment practices.
 
 The Docker deployment successfully demonstrated:
 
-[x] Docker image creation
-[x] Container startup
-[x] API deployment
-[x] Health monitoring
-[x] Prediction serving
-[x] Drift detection
-[x] Automated retraining
-[x] Runtime logging
-[x] End-to-end MLOps workflow execution
+- [x] Docker image creation
+- [x] Container startup
+- [x] API deployment
+- [x] Health monitoring
+- [x] Prediction serving
+- [x] Drift detection
+- [x] Automated retraining
+- [x] Runtime logging
+- [x] End-to-end MLOps workflow execution
 
 No deployment failures were observed during testing.
 

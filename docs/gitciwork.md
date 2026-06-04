@@ -270,16 +270,16 @@ After merging:
 
 The following components were successfully automated:
 
-[x] GitHub Actions
-[x] Continuous Integration
-[x] Automated Testing
-[x] Ruff Linting
-[x] Docker Build
-[x] DockerHub Deployment
-[x] Pull Request Validation
-[x] CML Reporting
-[x] Merge Validation
-[x] Main Branch Deployment
+- [x] GitHub Actions
+- [x] Continuous Integration
+- [x] Automated Testing
+- [x] Ruff Linting
+- [x] Docker Build
+- [x] DockerHub Deployment
+- [x] Pull Request Validation
+- [x] CML Reporting
+- [x] Merge Validation
+- [x] Main Branch Deployment
 
 ---
 
