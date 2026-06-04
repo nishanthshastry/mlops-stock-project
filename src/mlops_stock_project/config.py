@@ -1,0 +1,110 @@
+from pathlib import Path
+
+# PROJECT ROOT
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+# DATA DIRECTORIES
+
+DATA_DIR = PROJECT_ROOT / "data"
+
+RAW_DATA_DIR = DATA_DIR / "raw"
+
+PROCESSED_DATA_DIR = DATA_DIR / "processed"
+
+
+# MODEL DIRECTORY
+
+MODEL_DIR = PROJECT_ROOT / "models"
+
+
+# REPORT DIRECTORIES
+
+REPORTS_DIR = PROJECT_ROOT / "reports"
+
+REPORTS_FIGURES_DIR = REPORTS_DIR / "figures"
+
+REPORTS_MONITORING_DIR = REPORTS_DIR / "monitoring"
+
+REPORTS_BACKTESTING_DIR = REPORTS_DIR / "backtesting"
+
+REPORTS_EXPLAINABILITY_DIR = REPORTS_DIR / "explainability"
+
+
+# MLFLOW
+
+MLFLOW_DB_FILE = PROJECT_ROOT / "mlflow.db"
+
+MLRUNS_DIR = PROJECT_ROOT / "mlruns"
+
+
+# DVC
+
+DVC_DIR = PROJECT_ROOT / ".dvc"
+
+
+# API CONFIG
+
+API_HOST = "0.0.0.0"
+
+API_PORT = 8000
+
+
+# GLOBAL CONFIG
+
+RANDOM_STATE = 42
+
+TEST_SIZE = 0.2
+
+N_SPLITS = 5
+
+
+# MULTI-STOCK CONFIGURATION
+
+TICKERS = [
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "NVDA",
+    "TSLA",
+    "AMD",
+    "NFLX",
+    "INTC",
+]
+
+
+# DATASET FILES
+
+COMBINED_RAW_DATA_FILE = RAW_DATA_DIR / "combined_stock_data.csv"
+
+PROCESSED_DATA_FILE = PROCESSED_DATA_DIR / "stock_features.csv"
+
+
+# MODEL FILES
+
+MODEL_FILE = MODEL_DIR / "model_v1.pkl"
+
+
+# CREATE DIRECTORIES
+
+DIRECTORIES = [
+    DATA_DIR,
+    RAW_DATA_DIR,
+    PROCESSED_DATA_DIR,
+    MODEL_DIR,
+    REPORTS_DIR,
+    REPORTS_FIGURES_DIR,
+    REPORTS_MONITORING_DIR,
+    REPORTS_BACKTESTING_DIR,
+    REPORTS_EXPLAINABILITY_DIR,
+    MLRUNS_DIR,
+]
+
+for directory in DIRECTORIES:
+    directory.mkdir(
+        parents=True,
+        exist_ok=True,
+    )

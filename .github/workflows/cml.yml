@@ -1,0 +1,140 @@
+name: CML Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+  pull_request:
+    branches:
+      - main
+      - dev
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  train-report:
+    runs-on: ubuntu-latest
+
+    env:
+      PYTHONPATH: src
+
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install CML
+        run: |
+          npm install -g @dvcorg/cml
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-python-3.11-${{ hashFiles('requirements.txt') }}
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "dvc[s3]"
+          pip install -r requirements.txt
+
+      - name: Pull DVC Data
+        run: |
+          dvc pull
+
+      - name: Create Report Directories
+        run: |
+          mkdir -p reports/figures
+          mkdir -p reports/monitoring
+
+      - name: Run CI Validation
+        run: |
+          make ci
+
+      - name: Run Full ML Pipeline
+        run: |
+          make full-rebuild
+          make all
+
+      - name: Run Monitoring
+        run: |
+          make full-monitoring
+
+      - name: Run Simulations
+        run: |
+          make simulate-baseline
+          make simulate-retraining
+          make simulate-drift
+
+      - name: Generate CML Report
+        run: |
+          echo "# MLOps Trading Platform Report" > report.md
+          echo "" >> report.md
+
+          echo "## Pipeline Status" >> report.md
+          echo "All workflows completed successfully." >> report.md
+          echo "" >> report.md
+
+          echo "## Platform Components" >> report.md
+          echo "- FastAPI inference API" >> report.md
+          echo "- MLflow experiment tracking" >> report.md
+          echo "- DVC dataset versioning" >> report.md
+          echo "- Drift monitoring" >> report.md
+          echo "- Automated retraining" >> report.md
+          echo "- SHAP explainability" >> report.md
+          echo "- Backtesting engine" >> report.md
+          echo "- Regime analysis" >> report.md
+          echo "- Simulation framework" >> report.md
+          echo "" >> report.md
+
+          echo "## Generated Artifacts" >> report.md
+          echo '```' >> report.md
+          find reports -type f >> report.md || true
+          echo '```' >> report.md
+
+          echo "" >> report.md
+
+          echo "## Docker" >> report.md
+          echo "- DockerHub Repo: nshastry00/mlops-stock-api" >> report.md
+
+      - name: Save MLflow Information
+        run: |
+          mlflow --version >> report.md
+
+      - name: Publish PR Comment
+        if: github.event_name == 'pull_request'
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cml comment create report.md
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlops-artifacts
+          path: |
+            report.md
+            reports/

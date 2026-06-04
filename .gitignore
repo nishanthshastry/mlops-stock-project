@@ -217,3 +217,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+/data
+
+# MLflow
+mlruns/
+mlflow.db
+
+# DVC tracked artifacts
+models/*.pkl
+data/raw/*.csv
+data/processed/*.csv
+
+# Mac
+.DS_Store
