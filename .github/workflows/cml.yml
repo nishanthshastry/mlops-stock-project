@@ -1,4 +1,4 @@
-name: CML Workflow
+name: Research Report Generation
 
 on:
   push:
@@ -26,9 +26,7 @@ jobs:
       PYTHONPATH: src
 
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
       AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
     steps:
@@ -89,52 +87,136 @@ jobs:
           make simulate-retraining
           make simulate-drift
 
-      - name: Generate CML Report
+      - name: Generate Research Report
         run: |
-          echo "# MLOps Trading Platform Report" > report.md
+          echo "# MLOps Stock Prediction Research Report" > report.md
+          echo "" >> report.md
+
+          echo "## Research Topic" >> report.md
+          echo "Evaluating Model Drift and Retraining Strategies in an MLOps Pipeline for Stock Market Prediction" >> report.md
           echo "" >> report.md
 
           echo "## Pipeline Status" >> report.md
-          echo "All workflows completed successfully." >> report.md
+          echo "[x] Data Pipeline Completed" >> report.md
+          echo "[x] Feature Engineering Completed" >> report.md
+          echo "[x] Model Training Completed" >> report.md
+          echo "[x] Explainability Analysis Completed" >> report.md
+          echo "[x] Backtesting Completed" >> report.md
+          echo "[x] Regime Analysis Completed" >> report.md
+          echo "[x] Drift Detection Completed" >> report.md
+          echo "[x] Automated Retraining Completed" >> report.md
+          echo "[x] Simulations Completed" >> report.md
           echo "" >> report.md
 
           echo "## Platform Components" >> report.md
-          echo "- FastAPI inference API" >> report.md
-          echo "- MLflow experiment tracking" >> report.md
-          echo "- DVC dataset versioning" >> report.md
-          echo "- Drift monitoring" >> report.md
-          echo "- Automated retraining" >> report.md
-          echo "- SHAP explainability" >> report.md
-          echo "- Backtesting engine" >> report.md
-          echo "- Regime analysis" >> report.md
-          echo "- Simulation framework" >> report.md
+          echo "- FastAPI Inference API" >> report.md
+          echo "- Docker Deployment" >> report.md
+          echo "- MLflow Experiment Tracking" >> report.md
+          echo "- DVC Dataset & Model Versioning" >> report.md
+          echo "- Drift Monitoring" >> report.md
+          echo "- Automated Retraining" >> report.md
+          echo "- SHAP Explainability" >> report.md
+          echo "- Strategy Backtesting" >> report.md
           echo "" >> report.md
 
-          echo "## Generated Artifacts" >> report.md
-          echo '```' >> report.md
-          find reports -type f >> report.md || true
-          echo '```' >> report.md
+          echo "## Model Comparison" >> report.md
+          echo "" >> report.md
 
+          if [ -f reports/figures/LogisticRegression_cm.png ]; then
+            echo "### Logistic Regression" >> report.md
+            echo "![](reports/figures/LogisticRegression_cm.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          if [ -f reports/figures/RandomForest_cm.png ]; then
+            echo "### Random Forest" >> report.md
+            echo "![](reports/figures/RandomForest_cm.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          if [ -f reports/figures/ExtraTrees_cm.png ]; then
+            echo "### Extra Trees" >> report.md
+            echo "![](reports/figures/ExtraTrees_cm.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          if [ -f reports/figures/XGBoost_cm.png ]; then
+            echo "### XGBoost (Selected Model)" >> report.md
+            echo "![](reports/figures/XGBoost_cm.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          echo "## SHAP Explainability" >> report.md
+          echo "" >> report.md
+
+          if [ -f reports/figures/shap_summary.png ]; then
+            echo "![](reports/figures/shap_summary.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          if [ -f reports/figures/shap_bar.png ]; then
+            echo "![](reports/figures/shap_bar.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          echo "## Backtesting Results" >> report.md
+          echo "" >> report.md
+
+          if [ -f reports/figures/strategy_vs_market.png ]; then
+            echo "![](reports/figures/strategy_vs_market.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          echo "## Regime Analysis" >> report.md
+          echo "" >> report.md
+
+          if [ -f reports/figures/regime_f1_scores.png ]; then
+            echo "![](reports/figures/regime_f1_scores.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          echo "## Retraining Strategy Evaluation" >> report.md
+          echo "" >> report.md
+
+          if [ -f reports/figures/baseline_performance.png ]; then
+            echo "### Baseline Model" >> report.md
+            echo "![](reports/figures/baseline_performance.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          if [ -f reports/figures/scheduled_retraining_performance.png ]; then
+            echo "### Scheduled Retraining" >> report.md
+            echo "![](reports/figures/scheduled_retraining_performance.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          if [ -f reports/figures/drift_retraining_performance.png ]; then
+            echo "### Drift-Triggered Retraining" >> report.md
+            echo "![](reports/figures/drift_retraining_performance.png)" >> report.md
+            echo "" >> report.md
+          fi
+
+          echo "## MLflow" >> report.md
+          echo "" >> report.md
+          mlflow --version >> report.md
           echo "" >> report.md
 
           echo "## Docker" >> report.md
-          echo "- DockerHub Repo: nshastry00/mlops-stock-api" >> report.md
-
-      - name: Save MLflow Information
-        run: |
-          mlflow --version >> report.md
+          echo "- DockerHub Repository: nshastry00/mlops-stock-api" >> report.md
+          echo "" >> report.md
 
       - name: Publish PR Comment
         if: github.event_name == 'pull_request'
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cml comment create report.md
+          cml comment create --publish report.md
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mlops-artifacts
+          name: research-report-artifacts
           path: |
             report.md
-            reports/
+            reports/figures
+            reports/monitoring

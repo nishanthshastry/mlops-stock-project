@@ -4,6 +4,8 @@
 [![API Validation](https://img.shields.io/badge/Documentation-API%20Validation-green)](docs/API_REPORT.md)
 [![Docker Deployment](https://img.shields.io/badge/Documentation-Docker%20Deployment-blueviolet)](docs/DOCKER_REPORT.md)
 [![MLflow Tracking](https://img.shields.io/badge/Documentation-MLflow%20Tracking-orange)](docs/MLFLOW_REPORT.md)
+[![CI/CD Pipeline](https://img.shields.io/badge/Documentation-CI%2FCD%20Pipeline-red)](docs/gitciwork.md)
+
 ## Evaluating Model Drift and Retraining Strategies in an MLOps Pipeline for Stock Market Prediction
 
 ---
@@ -37,6 +39,7 @@ Detailed reports for each major component of the project:
 - [API Validation Report](docs/API_REPORT.md)
 - [Docker Deployment Report](docs/DOCKER_REPORT.md)
 - [MLflow Experiment Tracking Report](docs/MLFLOW_REPORT.md)
+- [GitHub Actions, CI/CD and Pull Request Validation Report](docs/gitciwork.md)
 
 ---
 
@@ -434,6 +437,7 @@ make docker-run
 | [API_REPORT.md](docs/API_REPORT.md) | FastAPI endpoint testing and validation |
 | [DOCKER_REPORT.md](docs/DOCKER_REPORT.md) | Docker deployment and container validation |
 | [MLFLOW_REPORT.md](docs/MLFLOW_REPORT.md) | Experiment tracking and model registry details |
+| [gitciwork.md](docs/gitciwork.md) | GitHub Actions workflows, CI/CD validation, Pull Request checks, CML reporting, and DockerHub deployment |
 
 ---
 
