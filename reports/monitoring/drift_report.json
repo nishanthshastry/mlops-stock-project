@@ -1,0 +1,63 @@
+{
+    "overall_drift_detected": true,
+    "drifted_features": [
+        "Volatility",
+        "MACD"
+    ],
+    "feature_results": {
+        "Return": {
+            "psi_score": 0.0482,
+            "ks_pvalue": 0.015326,
+            "severity": "stable",
+            "drift_detected": false
+        },
+        "Volatility": {
+            "psi_score": 3.3335,
+            "ks_pvalue": 0.0,
+            "severity": "significant",
+            "drift_detected": true
+        },
+        "RSI": {
+            "psi_score": 0.138,
+            "ks_pvalue": 0.0,
+            "severity": "moderate",
+            "drift_detected": false
+        },
+        "MACD": {
+            "psi_score": 0.7133,
+            "ks_pvalue": 0.0,
+            "severity": "significant",
+            "drift_detected": true
+        },
+        "SPY_Return": {
+            "psi_score": 0.0002,
+            "ks_pvalue": 1.0,
+            "severity": "stable",
+            "drift_detected": false
+        },
+        "QQQ_Return": {
+            "psi_score": 0.0003,
+            "ks_pvalue": 1.0,
+            "severity": "stable",
+            "drift_detected": false
+        },
+        "VIX_Level": {
+            "psi_score": 0.0032,
+            "ks_pvalue": 0.996306,
+            "severity": "stable",
+            "drift_detected": false
+        },
+        "Relative_SPY_Strength": {
+            "psi_score": 0.0898,
+            "ks_pvalue": 0.002945,
+            "severity": "stable",
+            "drift_detected": false
+        },
+        "Market_Stress": {
+            "psi_score": 0.0,
+            "ks_pvalue": 1.0,
+            "severity": "stable",
+            "drift_detected": false
+        }
+    }
+}
