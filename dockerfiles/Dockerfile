@@ -32,7 +32,7 @@ ENV PYTHONPATH=src
 
 # Pull DVC artifacts during build (optional)
 # Uncomment only if AWS credentials are available during build
-RUN dvc pull
+# RUN dvc pull
 
 # Expose FastAPI port
 EXPOSE 8080
