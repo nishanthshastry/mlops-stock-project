@@ -195,6 +195,14 @@ CML automatically generates a report summarizing:
 ## CML Report
 
 ![CML Report](../reports/cidocs/pull-request-actions-pr-comment.png)
+![CML Report](../reports/cidocs/pull-request-actions-pr-comment1.png)
+![CML Report](../reports/cidocs/pull-request-actions-pr-comment2.png)
+![CML Report](../reports/cidocs/pull-request-actions-pr-comment3.png)
+![CML Report](../reports/cidocs/pull-request-actions-pr-comment4.png)
+![CML Report](../reports/cidocs/pull-request-actions-pr-comment5.png)
+![CML Report](../reports/cidocs/pull-request-actions-pr-comment6.png)
+![CML Report](../reports/cidocs/pull-request-actions-pr-comment7.png)
+![CML Report](../reports/cidocs/pull-request-actions-pr-comment8.png)
 
 ---
 

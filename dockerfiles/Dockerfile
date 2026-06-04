@@ -35,7 +35,7 @@ ENV PYTHONPATH=src
 # RUN dvc pull
 
 # Expose FastAPI port
-EXPOSE 8000
+EXPOSE 8080
 
 # Run FastAPI app
-CMD ["uvicorn", "mlops_stock_project.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn mlops_stock_project.api.app:app --host 0.0.0.0 --port ${PORT:-8080}"]
