@@ -31,11 +31,29 @@ def test_home():
     assert data["model_loaded"] is True
 
 
+# HEALTH ENDPOINT
+def test_health():
+
+    response = client.get("/health")
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "status" in data
+
+    assert data["status"] == "healthy"
+
+    assert "model_loaded" in data
+
+    assert "model_name" in data
+
+
 # PREDICTION ENDPOINT
 def test_predict():
 
     payload = {
-        # Core features
+        # Core Features
         "Return": 0.01,
         "MA_5": 170.0,
         "MA_10": 168.0,
@@ -51,7 +69,7 @@ def test_predict():
         "MACD": 1.5,
         "BB_upper": 175.0,
         "BB_lower": 165.0,
-        # Market features
+        # Market Features
         "SPY_Return": 0.004,
         "SPY_MA_5": 520.0,
         "SPY_Volatility": 1.2,
@@ -62,20 +80,20 @@ def test_predict():
         "VIX_MA_5": 14.0,
         "VIX_Level": 13.5,
         "High_VIX_Regime": 0,
+        # Relative Market Features
         "Relative_SPY_Strength": 0.007,
         "Relative_QQQ_Strength": 0.009,
+        "Relative_SPY_Volatility": 0.10,
+        "Relative_VIX_Level": -0.05,
+        # Regime Features
         "Market_Stress": 0,
-        # Ticker dummies
-        "Ticker_AAPL": 1,
-        "Ticker_AMD": 0,
-        "Ticker_AMZN": 0,
-        "Ticker_GOOGL": 0,
-        "Ticker_INTC": 0,
-        "Ticker_META": 0,
-        "Ticker_MSFT": 0,
-        "Ticker_NFLX": 0,
-        "Ticker_NVDA": 0,
-        "Ticker_TSLA": 0,
+        "Sector_Strength": 0.012,
+        # Sector Features
+        "Sector_Technology": 1,
+        "Sector_Healthcare": 0,
+        "Sector_Financials": 0,
+        "Sector_Consumer": 0,
+        "Sector_Energy": 0,
     }
 
     response = client.post(
@@ -89,11 +107,15 @@ def test_predict():
 
     assert "prediction" in data
 
-    assert "confidence_score" in data
+    assert "probability" in data
+
+    assert "threshold" in data
 
     assert "confidence" in data
 
-    assert "threshold" in data
+    assert "confidence_score" in data
+
+    assert "model_name" in data
 
     assert isinstance(
         data["prediction"],
@@ -101,6 +123,17 @@ def test_predict():
     )
 
     assert isinstance(
+        data["probability"],
+        float,
+    )
+
+    assert isinstance(
         data["confidence_score"],
         float,
     )
+
+    assert data["confidence"] in [
+        "low",
+        "medium",
+        "high",
+    ]

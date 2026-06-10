@@ -195,6 +195,42 @@ def backtest_strategy():
 
     logger.info(f"Win Rate: {win_rate:.2%}")
 
+    if "Sector" in test_df.columns:
+
+        logger.info("\n========== SECTOR RETURNS ==========")
+
+        sector_results = []
+
+        for sector in sorted(test_df["Sector"].unique()):
+
+            sector_df = test_df[test_df["Sector"] == sector]
+
+            sector_daily_returns = sector_df.groupby("Date")[
+                "Net_Strategy_Return"
+            ].mean()
+
+            sector_return = (1 + sector_daily_returns).cumprod().iloc[-1] - 1
+
+            sector_results.append(
+                {
+                    "Sector": sector,
+                    "Return": round(
+                        float(sector_return),
+                        4,
+                    ),
+                    "Samples": len(sector_df),
+                }
+            )
+
+        sector_results_df = pd.DataFrame(sector_results)
+
+        logger.info(f"\n{sector_results_df}")
+
+        sector_results_df.to_csv(
+            FIGURES_DIR / "sector_backtest_returns.csv",
+            index=False,
+        )
+
     # EQUITY CURVE PLOT
     plt.figure(figsize=(14, 7))
 

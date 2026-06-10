@@ -28,27 +28,29 @@ MONITORING_DIR.mkdir(
 
 
 # FEATURES TO MONITOR
-
 MONITORED_FEATURES = [
-    # Core stock features
+    # Stock features
     "Return",
     "Volatility",
     "RSI",
     "MACD",
-    # Market context
+    # Market features
     "SPY_Return",
     "QQQ_Return",
     "VIX_Level",
-    # Relative strength
+    # Relative market features
     "Relative_SPY_Strength",
-    # Regime feature
+    "Relative_SPY_Volatility",
+    "Relative_VIX_Level",
+    # Regime features
     "Market_Stress",
+    "High_VIX_Regime",
+    # Sector-aware features
+    "Sector_Strength",
 ]
 
 
 # PSI CALCULATION
-
-
 def calculate_psi(
     expected,
     actual,
@@ -132,8 +134,6 @@ def calculate_psi(
 
 
 # DRIFT SEVERITY
-
-
 def classify_drift_severity(
     psi_score,
 ):
@@ -150,9 +150,52 @@ def classify_drift_severity(
     return "significant"
 
 
+# SECTOR DRIFT DETECTION
+def detect_sector_distribution_drift(
+    reference_df,
+    current_df,
+):
+    """
+    Monitor changes in sector composition.
+    """
+
+    reference_dist = reference_df["Sector"].value_counts(normalize=True).sort_index()
+
+    current_dist = current_df["Sector"].value_counts(normalize=True).sort_index()
+
+    sectors = sorted(set(reference_dist.index) | set(current_dist.index))
+
+    results = {}
+
+    for sector in sectors:
+
+        ref_pct = float(
+            reference_dist.get(
+                sector,
+                0,
+            )
+        )
+
+        cur_pct = float(
+            current_dist.get(
+                sector,
+                0,
+            )
+        )
+
+        results[sector] = {
+            "reference_pct": round(ref_pct, 4),
+            "current_pct": round(cur_pct, 4),
+            "absolute_change": round(
+                abs(cur_pct - ref_pct),
+                4,
+            ),
+        }
+
+    return results
+
+
 # MAIN DRIFT DETECTION
-
-
 def detect_drift(
     reference_df,
     current_df,
@@ -241,7 +284,6 @@ def detect_drift(
             logger.warning(f"Failed monitoring {feature}: {str(e)}")
 
     # SUMMARY
-
     drifted_features = [
         feature
         for (
@@ -251,17 +293,38 @@ def detect_drift(
         if result["drift_detected"]
     ]
 
+    if len(drift_results) > 0:
+
+        overall_drift_score = np.mean(
+            [result["psi_score"] for result in drift_results.values()]
+        )
+
+    else:
+
+        overall_drift_score = 0.0
+
     summary = {
         "overall_drift_detected": bool(drift_detected),
+        "overall_drift_score": round(
+            float(overall_drift_score),
+            4,
+        ),
         "drifted_features": [str(feature) for feature in drifted_features],
         "feature_results": {},
     }
 
-    # Safe JSON conversion
+    # SECTOR DISTRIBUTION DRIFT
+    summary["sector_distribution"] = detect_sector_distribution_drift(
+        reference_df,
+        current_df,
+    )
+
+    # SAFE JSON CONVERSION
     for (
         feature,
         result,
     ) in drift_results.items():
+
         summary["feature_results"][str(feature)] = {
             "psi_score": float(result["psi_score"]),
             "ks_pvalue": float(result["ks_pvalue"]),
@@ -270,7 +333,6 @@ def detect_drift(
         }
 
     # SAVE REPORT
-
     report_path = MONITORING_DIR / "drift_report.json"
 
     with open(
@@ -299,7 +361,6 @@ def detect_drift(
 
 
 # STANDALONE EXECUTION
-
 if __name__ == "__main__":
     logger.info("Running standalone drift monitoring...")
 

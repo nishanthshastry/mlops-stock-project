@@ -11,6 +11,8 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
+    balanced_accuracy_score,
+    matthews_corrcoef,
 )
 
 from sklearn.pipeline import Pipeline
@@ -203,6 +205,18 @@ def run_regime_analysis():
             zero_division=0,
         )
 
+        balanced_acc = balanced_accuracy_score(
+            y_true,
+            y_pred,
+        )
+
+        mcc = matthews_corrcoef(
+            y_true,
+            y_pred,
+        )
+
+        positive_rate = y_true.mean()
+
         avg_return = returns.mean()
 
         # Sharpe
@@ -254,6 +268,18 @@ def run_regime_analysis():
                     win_rate,
                     4,
                 ),
+                "Balanced_Accuracy": round(
+                    balanced_acc,
+                    4,
+                ),
+                "MCC": round(
+                    mcc,
+                    4,
+                ),
+                "Positive_Rate": round(
+                    positive_rate,
+                    4,
+                ),
             }
         )
 
@@ -276,7 +302,9 @@ def run_regime_analysis():
 
     logger.info(f"Saved regime performance CSV to {output_csv}")
 
-    # F1 SCORE PLOT
+    # ==========================================================
+    # F1 SCORE BY REGIME
+    # ==========================================================
 
     plt.figure(figsize=(10, 6))
 
@@ -302,6 +330,130 @@ def run_regime_analysis():
     plt.close()
 
     logger.info(f"Saved regime F1 plot to {f1_plot_path}")
+
+    # ==========================================================
+    # AVERAGE RETURN BY REGIME
+    # ==========================================================
+
+    plt.figure(figsize=(10, 6))
+
+    plt.bar(
+        regime_results_df["Regime"],
+        regime_results_df["Average_Return"],
+    )
+
+    plt.title("Average Return by Market Regime")
+
+    plt.ylabel("Average Return")
+
+    plt.grid(True)
+
+    return_plot_path = FIGURES_DIR / "regime_returns.png"
+
+    plt.savefig(
+        return_plot_path,
+        bbox_inches="tight",
+        dpi=300,
+    )
+
+    plt.close()
+
+    logger.info(f"Saved regime returns plot to {return_plot_path}")
+
+    # ==========================================================
+    # SECTOR PERFORMANCE ANALYSIS
+    # ==========================================================
+
+    sector_results = []
+
+    for sector in sorted(test_df["Sector"].unique()):
+
+        sector_df = test_df[test_df["Sector"] == sector]
+
+        if len(sector_df) == 0:
+            continue
+
+        y_true = sector_df["Target"]
+
+        y_pred = sector_df["Prediction"]
+
+        f1 = f1_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        )
+
+        balanced_acc = balanced_accuracy_score(
+            y_true,
+            y_pred,
+        )
+
+        mcc = matthews_corrcoef(
+            y_true,
+            y_pred,
+        )
+
+        sector_results.append(
+            {
+                "Sector": sector,
+                "Samples": len(sector_df),
+                "F1_Score": round(f1, 4),
+                "Balanced_Accuracy": round(
+                    balanced_acc,
+                    4,
+                ),
+                "MCC": round(
+                    mcc,
+                    4,
+                ),
+            }
+        )
+
+    sector_df_results = pd.DataFrame(sector_results)
+
+    logger.info("\n========== SECTOR PERFORMANCE ==========\n")
+
+    logger.info(f"\n{sector_df_results}")
+
+    sector_csv = FIGURES_DIR / "sector_performance.csv"
+
+    sector_df_results.to_csv(
+        sector_csv,
+        index=False,
+    )
+
+    logger.info(f"Saved sector performance CSV to {sector_csv}")
+
+    # ==========================================================
+    # SECTOR F1 PLOT
+    # ==========================================================
+
+    plt.figure(figsize=(10, 6))
+
+    plt.bar(
+        sector_df_results["Sector"],
+        sector_df_results["F1_Score"],
+    )
+
+    plt.title("F1 Score by Sector")
+
+    plt.ylabel("F1 Score")
+
+    plt.xticks(rotation=30)
+
+    plt.grid(True)
+
+    sector_plot = FIGURES_DIR / "sector_f1_scores.png"
+
+    plt.savefig(
+        sector_plot,
+        bbox_inches="tight",
+        dpi=300,
+    )
+
+    plt.close()
+
+    logger.info(f"Saved sector F1 plot to {sector_plot}")
 
     logger.info("Regime analysis completed.")
 
