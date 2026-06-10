@@ -8,6 +8,7 @@ from mlops_stock_project.config import (
     RAW_DATA_DIR,
     COMBINED_RAW_DATA_FILE,
     TICKERS,
+    MARKET_INDICATORS,
 )
 
 from mlops_stock_project.logging_config import (
@@ -18,9 +19,39 @@ logger = get_logger(__name__)
 
 # Market context symbols
 MARKET_SYMBOLS = {
-    "SPY": "SPY",
-    "QQQ": "QQQ",
-    "VIX": "^VIX",
+    "SPY": MARKET_INDICATORS[0],
+    "QQQ": MARKET_INDICATORS[1],
+    "VIX": MARKET_INDICATORS[2],
+}
+
+SECTOR_MAP = {
+    # Technology
+    "AAPL": "Technology",
+    "MSFT": "Technology",
+    "GOOGL": "Technology",
+    "AMZN": "Technology",
+    "META": "Technology",
+    "NVDA": "Technology",
+    "TSLA": "Technology",
+    "AMD": "Technology",
+    "NFLX": "Technology",
+    "INTC": "Technology",
+    # Healthcare
+    "JNJ": "Healthcare",
+    "PFE": "Healthcare",
+    "MRK": "Healthcare",
+    "ABBV": "Healthcare",
+    # Financials
+    "JPM": "Financials",
+    "BAC": "Financials",
+    "GS": "Financials",
+    # Consumer
+    "WMT": "Consumer",
+    "COST": "Consumer",
+    "PG": "Consumer",
+    # Energy
+    "XOM": "Energy",
+    "CVX": "Energy",
 }
 
 
@@ -147,6 +178,8 @@ def fetch_stock_data(
             # Add ticker
             data["Ticker"] = ticker
 
+            data["Sector"] = SECTOR_MAP[ticker]
+
             # Remove missing rows
             data = data.dropna()
 
@@ -211,6 +244,25 @@ def fetch_stock_data(
 
     except Exception as e:
         logger.warning(f"DVC tracking failed: {str(e)}")
+
+    logger.info("=" * 60)
+    logger.info("DATASET SUMMARY")
+    logger.info("=" * 60)
+
+    logger.info(f"Stocks included: {len(TICKERS)}")
+
+    logger.info(f"Unique tickers: {combined_df['Ticker'].nunique()}")
+
+    logger.info(
+        f"Date range: "
+        f"{combined_df['Date'].min()} "
+        f"to "
+        f"{combined_df['Date'].max()}"
+    )
+
+    logger.info(f"Rows per ticker:\n" f"{combined_df.groupby('Ticker').size()}")
+
+    logger.info("=" * 60)
 
     return combined_df
 

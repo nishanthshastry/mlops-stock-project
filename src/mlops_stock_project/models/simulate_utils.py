@@ -8,6 +8,8 @@ from sklearn.metrics import (
     f1_score,
     precision_score,
     recall_score,
+    balanced_accuracy_score,
+    matthews_corrcoef,
 )
 
 from xgboost import XGBClassifier
@@ -82,8 +84,6 @@ def create_xgboost_model(
 
 
 # COMPUTE METRICS
-
-
 def compute_classification_metrics(
     y_true,
     y_pred,
@@ -104,12 +104,18 @@ def compute_classification_metrics(
             y_pred,
             zero_division=0,
         ),
+        "balanced_accuracy": balanced_accuracy_score(
+            y_true,
+            y_pred,
+        ),
+        "mcc": matthews_corrcoef(
+            y_true,
+            y_pred,
+        ),
     }
 
 
 # PLOT PERFORMANCE
-
-
 def plot_simulation_metrics(
     evaluation_steps,
     f1_scores,

@@ -8,6 +8,7 @@ from mlops_stock_project.config import (
     COMBINED_RAW_DATA_FILE,
     PROCESSED_DATA_DIR,
     PROCESSED_DATA_FILE,
+    TARGET_RETURN_THRESHOLD,
 )
 
 from mlops_stock_project.logging_config import (
@@ -61,6 +62,18 @@ def build_features(
 
     # Sort properly
     df = df.sort_values(["Ticker", "Date"])
+
+    # SECTOR FEATURES
+    sector_dummies = pd.get_dummies(
+        df["Sector"],
+        prefix="Sector",
+        dtype=int,
+    )
+
+    df = pd.concat(
+        [df, sector_dummies],
+        axis=1,
+    )
 
     # Group by ticker
     grouped = df.groupby("Ticker")
@@ -168,6 +181,11 @@ def build_features(
 
     df["Relative_QQQ_Strength"] = df["Return"] - df["QQQ_Return"]
 
+    # Relative volatility
+    df["Relative_SPY_Volatility"] = df["Volatility"] / (df["SPY_Volatility"] + 1e-6)
+
+    df["Relative_VIX_Level"] = df["Volatility"] / (df["VIX_Level"] + 1e-6)
+
     # VOLATILITY REGIME FEATURES
     df["Market_Stress"] = np.where(
         (df["VIX_Close"] > 30) & (df["SPY_Return"] < 0),
@@ -175,11 +193,23 @@ def build_features(
         0,
     )
 
+    # Sector strength relative to market
+
+    sector_returns = df.groupby(["Date", "Sector"])["Return"].transform("mean")
+
+    df["Sector_Strength"] = sector_returns - df["SPY_Return"]
+
     # TARGET
     future_return = (grouped["Close"].shift(-5) - df["Close"]) / df["Close"]
 
     # Stronger directional target
-    df["Target"] = (future_return > 0.01).astype(int)
+    df["Target"] = (future_return > TARGET_RETURN_THRESHOLD).astype(int)
+
+    positive_rate = df["Target"].mean()
+
+    logger.info(f"Positive Class Rate: " f"{positive_rate:.2%}")
+
+    logger.info("Target Count:\n" f"{df['Target'].value_counts()}")
 
     # ===================== CLEANUP =====================
 

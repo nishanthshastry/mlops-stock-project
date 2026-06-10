@@ -91,11 +91,11 @@ simulate-drift:
 
 # API
 run-api:
-    uvicorn mlops_stock_project.api.app:app \
-        --reload \
-        --host 0.0.0.0 \
-        --port 8080 \
-        --app-dir src
+	uvicorn mlops_stock_project.api.app:app \
+		--reload \
+		--host 0.0.0.0 \
+		--port 8080 \
+		--app-dir src
 
 
 # MLFLOW
@@ -109,6 +109,9 @@ test:
 
 validate:
 	$(MAKE) train
+	$(MAKE) backtest
+	$(MAKE) shap
+	$(MAKE) regime
 	$(MAKE) drift
 	$(MAKE) retrain
 	$(MAKE) test
@@ -143,7 +146,7 @@ docker-build:
 		-f dockerfiles/Dockerfile .
 
 docker-run:
-    docker run -p 8080:8080 mlops-stock-api
+	docker run -p 8080:8080 mlops-stock-api
 
 
 # FULL PIPELINES
@@ -158,10 +161,10 @@ pipeline:
 	$(MAKE) fetch-data
 	$(MAKE) build-features
 	$(MAKE) train
-	$(MAKE) shap
+	$(MAKE) simulate-baseline
 	$(MAKE) backtest
 	$(MAKE) regime
-	$(MAKE) simulate-baseline
+	$(MAKE) shap
 	$(MAKE) simulate-retraining
 	$(MAKE) simulate-drift
 

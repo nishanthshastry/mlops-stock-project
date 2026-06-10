@@ -27,10 +27,9 @@ logger = get_logger(__name__)
 
 
 # FASTAPI APP
-
 app = FastAPI(
     title="MLOps Stock Prediction API",
-    version="2.0.0",
+    version="3.0.0",
 )
 
 
@@ -46,85 +45,67 @@ model_name = "Unknown"
 
 
 # REQUEST SCHEMA
-
-
 class StockFeatures(BaseModel):
+    # Core features
+
     Return: float
-
     MA_5: float
-
     MA_10: float
-
     Volatility: float
 
     Lag_1: float
-
     Lag_2: float
-
     Lag_3: float
 
     Momentum_5: float
-
     EMA_10: float
-
     RSI: float
 
     Volume_Change: float
-
     Volume_MA_5: float
 
     MACD: float
 
     BB_upper: float
-
     BB_lower: float
 
+    # Market features
+
     SPY_Return: float = 0
-
     SPY_MA_5: float = 0
-
     SPY_Volatility: float = 0
 
     QQQ_Return: float = 0
-
     QQQ_Momentum: float = 0
-
     QQQ_MA_10: float = 0
 
     VIX_Return: float = 0
-
     VIX_MA_5: float = 0
-
     VIX_Level: float = 20
 
     High_VIX_Regime: int = 0
 
-    Relative_SPY_Strength: float = 0
+    # Relative features
 
+    Relative_SPY_Strength: float = 0
     Relative_QQQ_Strength: float = 0
+
+    Relative_SPY_Volatility: float = 0
+    Relative_VIX_Level: float = 0
+
+    # Regime features
 
     Market_Stress: int = 0
 
-    # Optional ticker flags
-    Ticker_AAPL: int = 0
+    # Sector features
 
-    Ticker_AMD: int = 0
+    Sector_Strength: float = 0
 
-    Ticker_AMZN: int = 0
-
-    Ticker_GOOGL: int = 0
-
-    Ticker_INTC: int = 0
-
-    Ticker_META: int = 0
-
-    Ticker_MSFT: int = 0
-
-    Ticker_NFLX: int = 0
-
-    Ticker_NVDA: int = 0
-
-    Ticker_TSLA: int = 0
+    Sector_Technology: int = 0
+    Sector_Healthcare: int = 0
+    Sector_Financials: int = 0
+    Sector_Consumer: int = 0
+    Sector_Energy: int = 0
 
 
 # LOAD MODEL
@@ -217,8 +198,6 @@ def home():
 
 
 # HEALTH CHECK
-
-
 @app.get("/health")
 def health_check():
 
@@ -229,9 +208,21 @@ def health_check():
     }
 
 
+@app.get("/model-info")
+def model_info():
+
+    return {
+        "model_name": model_name,
+        "threshold": round(
+            float(threshold),
+            4,
+        ),
+        "feature_count": len(features),
+        "features": features,
+    }
+
+
 # PREDICTION ENDPOINT
-
-
 @app.post("/predict")
 def predict(
     data: StockFeatures,
@@ -324,31 +315,34 @@ def predict(
 
 
 # MANUAL RETRAINING
-
-
 @app.post("/retrain")
 def retrain():
 
     try:
+
         result = retrain_if_drift_detected()
 
-        # Reload updated model
         load_model()
 
-        print(result)
+        metrics = result["retraining_result"] if result["retraining_result"] else {}
 
         return {
             "success": True,
             "model_name": result["current_model"],
             "drift_detected": result["drift_detected"],
             "retraining_triggered": result["retraining_triggered"],
-            "f1_score": result["retraining_result"]["f1_score"].__round__(4),
-            "precision": result["retraining_result"]["precision"].__round__(4),
-            "recall": result["retraining_result"]["recall"].__round__(4),
-            "threshold": result["retraining_result"]["threshold"],
+            "drift_score": result["drift_summary"].get(
+                "overall_drift_score",
+                0,
+            ),
+            "f1_score": metrics.get("f1_score"),
+            "precision": metrics.get("precision"),
+            "recall": metrics.get("recall"),
+            "threshold": metrics.get("threshold"),
         }
 
     except Exception as e:
+
         logger.error(f"Retraining failed: {str(e)}")
 
         raise HTTPException(

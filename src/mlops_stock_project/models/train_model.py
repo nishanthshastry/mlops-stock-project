@@ -38,6 +38,11 @@ from sklearn.metrics import (
     f1_score,
     precision_score,
     recall_score,
+    roc_auc_score,
+    balanced_accuracy_score,
+    matthews_corrcoef,
+    precision_recall_curve,
+    auc,
 )
 
 from xgboost import XGBClassifier
@@ -186,7 +191,7 @@ def train_and_track_models(
     # FEATURE LIST
 
     features = [
-        # Core features
+        # STOCK-SPECIFIC FEATURES
         "Return",
         "MA_5",
         "MA_10",
@@ -202,7 +207,7 @@ def train_and_track_models(
         "MACD",
         "BB_upper",
         "BB_lower",
-        # Market context
+        # MARKET CONTEXT FEATURES
         "SPY_Return",
         "SPY_MA_5",
         "SPY_Volatility",
@@ -213,24 +218,23 @@ def train_and_track_models(
         "VIX_MA_5",
         "VIX_Level",
         "High_VIX_Regime",
+        # RELATIVE MARKET FEATURES
         "Relative_SPY_Strength",
         "Relative_QQQ_Strength",
+        "Relative_SPY_Volatility",
+        "Relative_VIX_Level",
+        # REGIME FEATURES
         "Market_Stress",
-        # Ticker dummies
-        "Ticker_AAPL",
-        "Ticker_AMD",
-        "Ticker_AMZN",
-        "Ticker_GOOGL",
-        "Ticker_INTC",
-        "Ticker_META",
-        "Ticker_MSFT",
-        "Ticker_NFLX",
-        "Ticker_NVDA",
-        "Ticker_TSLA",
+        "Sector_Strength",
+        # SECTOR FEATURES
+        "Sector_Technology",
+        "Sector_Healthcare",
+        "Sector_Financials",
+        "Sector_Consumer",
+        "Sector_Energy",
     ]
 
     # PREPARE FEATURES
-
     X = prepare_features(
         df,
         features,
@@ -238,16 +242,18 @@ def train_and_track_models(
 
     y = df["Target"]
 
+    logger.info(f"Positive class rate: " f"{y.mean():.2%}")
+
+    logger.info(f"Target counts:\n" f"{y.value_counts()}")
+
     logger.info(f"Using {len(features)} features")
 
     # MLFLOW SETUP
-
     mlflow.set_tracking_uri(f"sqlite:///{PROJECT_ROOT / 'mlflow.db'}")
 
     mlflow.set_experiment("mlops-stock-prediction")
 
     # TIMESERIES CV
-
     tscv = TimeSeriesSplit(
         n_splits=3,
     )
@@ -262,7 +268,7 @@ def train_and_track_models(
 
     best_threshold = 0.5
 
-    best_score = 0
+    best_score = float("-inf")
 
     best_metrics = {}
 
@@ -311,6 +317,8 @@ def train_and_track_models(
                 # PREDICT PROBA
                 y_prob = model.predict_proba(X_test)[:, 1]
 
+                final_y_prob = y_prob
+
                 # OPTIMIZE THRESHOLD
                 threshold, fold_f1 = optimize_threshold(
                     y_test,
@@ -348,7 +356,50 @@ def train_and_track_models(
                 zero_division=0,
             )
 
+            roc_auc = roc_auc_score(
+                final_y_test,
+                final_y_prob,
+            )
+
+            balanced_acc = balanced_accuracy_score(
+                final_y_test,
+                final_y_pred,
+            )
+
+            mcc = matthews_corrcoef(
+                final_y_test,
+                final_y_pred,
+            )
+
+            precision_curve, recall_curve, _ = precision_recall_curve(
+                final_y_test,
+                final_y_prob,
+            )
+
+            pr_auc = auc(
+                recall_curve,
+                precision_curve,
+            )
+
+            composite_score = (
+                0.40 * avg_f1
+                + 0.25 * roc_auc
+                + 0.20 * balanced_acc
+                + 0.15 * max(mcc, 0)
+            )
+
             logger.info(f"{model_name} Average F1: {avg_f1:.4f}")
+
+            logger.info(
+                f"{model_name} Results | "
+                f"F1={avg_f1:.4f} | "
+                f"Precision={precision:.4f} | "
+                f"Recall={recall:.4f} | "
+                f"ROC_AUC={roc_auc:.4f} | "
+                f"BalancedAcc={balanced_acc:.4f} | "
+                f"MCC={mcc:.4f} | "
+                f"PR_AUC={pr_auc:.4f}"
+            )
 
             # MLFLOW LOGGING
 
@@ -373,8 +424,33 @@ def train_and_track_models(
             )
 
             mlflow.log_metric(
+                "roc_auc",
+                roc_auc,
+            )
+
+            mlflow.log_metric(
+                "balanced_accuracy",
+                balanced_acc,
+            )
+
+            mlflow.log_metric(
+                "mcc",
+                mcc,
+            )
+
+            mlflow.log_metric(
+                "pr_auc",
+                pr_auc,
+            )
+
+            mlflow.log_metric(
                 "optimal_threshold",
                 avg_threshold,
+            )
+
+            mlflow.log_metric(
+                "composite_score",
+                composite_score,
             )
 
             # FEATURE IMPORTANCE
@@ -402,6 +478,13 @@ def train_and_track_models(
                 )
 
                 logger.info(f"\nTop Features:\n{importance_df.head(15)}")
+
+                sector_features = importance_df[
+                    importance_df["feature"].str.contains("Sector")
+                ]
+
+                if not sector_features.empty:
+                    logger.info(f"\nSector Feature Importance:\n" f"{sector_features}")
 
             # CONFUSION MATRIX
 
@@ -432,8 +515,8 @@ def train_and_track_models(
 
             # BEST MODEL
 
-            if avg_f1 > best_score:
-                best_score = avg_f1
+            if composite_score > best_score:
+                best_score = composite_score
 
                 best_model = model
 
@@ -442,19 +525,21 @@ def train_and_track_models(
                 best_threshold = avg_threshold
 
                 best_metrics = {
-                    "f1_score": 0.0 if np.isnan(avg_f1) else float(avg_f1),
-                    "precision": 0.0 if np.isnan(precision) else float(precision),
-                    "recall": 0.0 if np.isnan(recall) else float(recall),
-                    "threshold": (
-                        0.5 if np.isnan(avg_threshold) else float(avg_threshold)
-                    ),
+                    "f1_score": float(avg_f1),
+                    "precision": float(precision),
+                    "recall": float(recall),
+                    "roc_auc": float(roc_auc),
+                    "balanced_accuracy": float(balanced_acc),
+                    "mcc": float(mcc),
+                    "pr_auc": float(pr_auc),
+                    "threshold": float(avg_threshold),
                 }
 
     # SAVE BEST MODEL
 
     logger.info(f"\nBest Model: {best_model_name}")
 
-    logger.info(f"Best Average F1: {best_score:.4f}")
+    logger.info(f"Best Composite Score: {best_score:.4f}")
 
     os.makedirs(
         MODEL_DIR,

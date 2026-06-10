@@ -1,0 +1,119 @@
+{
+    "drift_detected": false,
+    "retraining_triggered": false,
+    "current_model": "XGBoost",
+    "drift_summary": {
+        "overall_drift_detected": false,
+        "overall_drift_score": 0.0616,
+        "drifted_features": [],
+        "feature_results": {
+            "Return": {
+                "psi_score": 0.0059,
+                "ks_pvalue": 2e-06,
+                "severity": "stable",
+                "drift_detected": false
+            },
+            "Volatility": {
+                "psi_score": 0.2021,
+                "ks_pvalue": 0.0,
+                "severity": "moderate",
+                "drift_detected": false
+            },
+            "RSI": {
+                "psi_score": 0.0124,
+                "ks_pvalue": 0.0,
+                "severity": "stable",
+                "drift_detected": false
+            },
+            "MACD": {
+                "psi_score": 0.1306,
+                "ks_pvalue": 0.0,
+                "severity": "moderate",
+                "drift_detected": false
+            },
+            "SPY_Return": {
+                "psi_score": 0.0001,
+                "ks_pvalue": 1.0,
+                "severity": "stable",
+                "drift_detected": false
+            },
+            "QQQ_Return": {
+                "psi_score": 0.0001,
+                "ks_pvalue": 0.999999,
+                "severity": "stable",
+                "drift_detected": false
+            },
+            "VIX_Level": {
+                "psi_score": 0.0024,
+                "ks_pvalue": 0.037002,
+                "severity": "stable",
+                "drift_detected": false
+            },
+            "Relative_SPY_Strength": {
+                "psi_score": 0.0163,
+                "ks_pvalue": 0.0,
+                "severity": "stable",
+                "drift_detected": false
+            },
+            "Relative_SPY_Volatility": {
+                "psi_score": 0.2093,
+                "ks_pvalue": 0.0,
+                "severity": "moderate",
+                "drift_detected": false
+            },
+            "Relative_VIX_Level": {
+                "psi_score": 0.2185,
+                "ks_pvalue": 0.0,
+                "severity": "moderate",
+                "drift_detected": false
+            },
+            "Market_Stress": {
+                "psi_score": 0.0,
+                "ks_pvalue": 1.0,
+                "severity": "stable",
+                "drift_detected": false
+            },
+            "High_VIX_Regime": {
+                "psi_score": 0.0,
+                "ks_pvalue": 0.994516,
+                "severity": "stable",
+                "drift_detected": false
+            },
+            "Sector_Strength": {
+                "psi_score": 0.0025,
+                "ks_pvalue": 0.00389,
+                "severity": "stable",
+                "drift_detected": false
+            }
+        },
+        "sector_distribution": {
+            "Consumer": {
+                "reference_pct": 0.0568,
+                "current_pct": 0.4545,
+                "absolute_change": 0.3977
+            },
+            "Energy": {
+                "reference_pct": 0.0568,
+                "current_pct": 0.2273,
+                "absolute_change": 0.1705
+            },
+            "Financials": {
+                "reference_pct": 0.1705,
+                "current_pct": 0.0,
+                "absolute_change": 0.1705
+            },
+            "Healthcare": {
+                "reference_pct": 0.2045,
+                "current_pct": 0.0909,
+                "absolute_change": 0.1136
+            },
+            "Technology": {
+                "reference_pct": 0.5114,
+                "current_pct": 0.2273,
+                "absolute_change": 0.2841
+            }
+        }
+    },
+    "retraining_result": null,
+    "timestamp": "2026-06-10T13:58:57.199992+00:00"
+}

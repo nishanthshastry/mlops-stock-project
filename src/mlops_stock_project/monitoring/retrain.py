@@ -4,6 +4,8 @@ import shutil
 import joblib
 import pandas as pd
 
+from datetime import datetime, timezone
+
 from mlops_stock_project.config import (
     MODEL_FILE,
     PROCESSED_DATA_FILE,
@@ -26,7 +28,6 @@ logger = get_logger(__name__)
 
 
 # MONITORING OUTPUT
-
 MONITORING_DIR = PROJECT_ROOT / "reports" / "monitoring"
 
 MONITORING_DIR.mkdir(
@@ -36,8 +37,6 @@ MONITORING_DIR.mkdir(
 
 
 # RETRAINING PIPELINE
-
-
 def retrain_if_drift_detected():
 
     logger.info("Starting retraining evaluation...")
@@ -73,8 +72,14 @@ def retrain_if_drift_detected():
 
     drift_detected = drift_summary["overall_drift_detected"]
 
-    # LOAD CURRENT MODEL
+    drift_score = drift_summary.get(
+        "overall_drift_score",
+        0,
+    )
 
+    logger.info(f"Overall Drift Score: " f"{drift_score:.4f}")
+
+    # LOAD CURRENT MODEL
     current_artifact = joblib.load(MODEL_FILE)
 
     current_model_name = current_artifact.get(
@@ -89,8 +94,7 @@ def retrain_if_drift_detected():
     retraining_result = None
 
     # RETRAIN IF DRIFT DETECTED
-
-    if drift_detected:
+    if drift_detected or drift_score >= 0.25:
         logger.warning("Drift detected. Starting retraining...")
 
         retraining_triggered = True
@@ -104,12 +108,10 @@ def retrain_if_drift_detected():
         )
 
         logger.info(f"Backed up model to {backup_path}")
-
         # Retrain models
         best_model, best_metrics = train_and_track_models()
 
         retraining_result = best_metrics
-
         logger.info("Retraining completed.")
 
     else:
@@ -123,6 +125,7 @@ def retrain_if_drift_detected():
         "current_model": str(current_model_name),
         "drift_summary": drift_summary,
         "retraining_result": retraining_result,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     report_path = MONITORING_DIR / "retraining_report.json"
@@ -144,6 +147,5 @@ def retrain_if_drift_detected():
 
 
 # MAIN
-
 if __name__ == "__main__":
     retrain_if_drift_detected()

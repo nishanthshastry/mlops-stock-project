@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from mlops_stock_project.config import (
@@ -23,16 +24,13 @@ from mlops_stock_project.models.simulate_utils import (
 logger = get_logger(__name__)
 
 
-# SCHEDULED RETRAINING
-
-
+# SCHEDULED RETRAINING SIMULATION
 def simulate_retraining(
     data_path=PROCESSED_DATA_FILE,
 ):
     logger.info("Running scheduled retraining simulation...")
 
     # LOAD DATA
-
     df = pd.read_csv(data_path)
 
     df["Date"] = pd.to_datetime(df["Date"])
@@ -44,16 +42,27 @@ def simulate_retraining(
         ]
     )
 
+    logger.info(f"Dataset rows: {len(df)}")
+
+    # LOAD MODEL ARTIFACT
     artifact = load_model_artifact()
 
     features = artifact["features"]
 
-    split_date = df["Date"].quantile(0.6)
+    logger.info(f"Using {len(features)} features")
+
+    # TRAIN / TEST SPLIT
+    split_date = df["Date"].quantile(0.60)
 
     train_data = df[df["Date"] < split_date].copy()
 
     test_data = df[df["Date"] >= split_date].copy()
 
+    logger.info(f"Train rows: {len(train_data)}")
+
+    logger.info(f"Test rows: {len(test_data)}")
+
+    # INITIAL TRAINING
     X_train = prepare_features(
         train_data,
         features,
@@ -71,10 +80,11 @@ def simulate_retraining(
     )
 
     # CONFIG
-
     window_size = 500
 
     retrain_interval = 1000
+
+    evaluation_window = 1000
 
     f1_scores = []
 
@@ -86,19 +96,19 @@ def simulate_retraining(
 
     retrain_points = []
 
-    logger.info(f"Evaluating {len(test_data)} test rows in chunks of {window_size}")
+    logger.info(f"Evaluating {len(test_data)} " f"rows in chunks of {window_size}")
 
-    # FAST EVALUATION LOOP
-
+    # SIMULATION LOOP
     for i in range(
         window_size,
         len(test_data),
         window_size,
     ):
-        # RETRAIN
 
+        # SCHEDULED RETRAINING
         if i % retrain_interval == 0:
-            logger.info(f"Retraining model at step {i}")
+
+            logger.info(f"Retraining model at " f"step {i}")
 
             retrain_data = pd.concat(
                 [
@@ -121,9 +131,15 @@ def simulate_retraining(
 
             retrain_points.append(i)
 
-        # EVALUATE
+            logger.info(f"Retrained on " f"{len(retrain_data)} rows")
 
-        evaluation_df = test_data.iloc[:i]
+        # ROLLING EVALUATION
+        evaluation_df = test_data.iloc[
+            max(
+                0,
+                i - evaluation_window,
+            ) : i
+        ]
 
         X_eval = prepare_features(
             evaluation_df,
@@ -147,13 +163,30 @@ def simulate_retraining(
 
         evaluation_steps.append(i)
 
-        logger.info(f"Step={i} | F1={metrics['f1']:.4f}")
+        logger.info(
+            f"Step={i} | "
+            f"F1={metrics['f1']:.4f} | "
+            f"Precision={metrics['precision']:.4f} | "
+            f"Recall={metrics['recall']:.4f}"
+        )
 
+    # FINAL SUMMARY
     if len(f1_scores) > 0:
-        logger.info(f"Final F1: {f1_scores[-1]:.4f}")
+
+        logger.info(f"Final F1: " f"{f1_scores[-1]:.4f}")
+
+        logger.info(f"Average F1: " f"{np.mean(f1_scores):.4f}")
+
+    logger.info(f"Total Scheduled Retraining Events: " f"{len(retrain_points)}")
+
+    logger.info(
+        f"Retraining Frequency: "
+        f"{len(retrain_points)} / "
+        f"{len(evaluation_steps)} "
+        f"evaluation periods"
+    )
 
     # PLOT
-
     output_file = REPORTS_FIGURES_DIR / "scheduled_retraining_performance.png"
 
     plot_simulation_metrics(
@@ -165,6 +198,8 @@ def simulate_retraining(
         title="Scheduled Retraining Performance",
         vertical_markers=retrain_points,
     )
+
+    logger.info(f"Saved plot to {output_file}")
 
     logger.info("Scheduled retraining simulation completed.")
 

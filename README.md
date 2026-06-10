@@ -31,6 +31,53 @@ The primary objective is to evaluate whether monitoring and retraining mechanism
 
 ---
 
+## Project Evolution
+
+This repository contains the final version of the MLOps Stock Prediction Platform after incorporating instructor feedback and implementing advanced MLOps capabilities including:
+
+- Drift detection and monitoring
+- Automated retraining workflows
+- MLflow experiment tracking
+- SHAP explainability
+- Regime-aware evaluation
+- Sector-level analysis
+- Strategy backtesting
+- CI/CD automation
+- Dockerized deployment
+
+The original project submission prior to feedback integration is preserved in the following branch:
+
+**Original Version:** https://github.com/nishanthshastry/mlops-stock-project/tree/main-old
+
+The current `main` branch represents the enhanced version developed after multiple rounds of improvements and productionization work.
+
+### Repository Branches
+
+| Branch | Purpose |
+|---------|---------|
+| main-old | Original project submission |
+| main | Enhanced project after feedback implementation |
+
+---
+
+## Improvements Based on Instructor Feedback
+
+Compared to the original project version (main-old branch), the following enhancements were implemented:
+
+- Added SHAP explainability
+- Added market regime analysis
+- Added sector-level evaluation
+- Added drift detection monitoring
+- Added automated retraining
+- Added MLflow experiment tracking
+- Added Docker deployment
+- Added FastAPI service endpoints
+- Added CI/CD automation
+- Added strategy backtesting against buy-and-hold baseline
+- Expanded stock universe from pure technology stocks to multiple sectors
+
+---
+
 ## Project Documentation
 
 Detailed reports for each major component of the project:
@@ -88,40 +135,16 @@ This project contributes:
 * Financial backtesting evaluation
 * Market regime performance analysis
 * FastAPI deployment layer
+* Data versioning with DVC
 * Dockerized deployment workflow
 * MLflow experiment tracking
+* Automated CI/CD validation pipeline
 
 ---
 
-## System Architecture
+## Pipeline Architecture
 
-```text
-Market Data
-     │
-     V
-Data Pipeline
-     │
-     V
-Feature Engineering
-     │
-     V
-Model Training
-     │
-     V
-Model Evaluation
-     │
-     V
-FastAPI Deployment
-     │
-     V
-Monitoring
-     │
-     V
-Drift Detection
-     │
-     V
-Retraining
-```
+![Pipeline Architecture](reports/pipeline/pipeline-architecture.png)
 
 ---
 
@@ -178,21 +201,47 @@ mlops-stock-project/
 
 ## Dataset
 
-Historical stock market data was collected for major technology stocks including:
+Historical market data was collected for 22 large-cap U.S. equities spanning multiple sectors:
 
-* Apple (AAPL)
-* Microsoft (MSFT)
-* Nvidia (NVDA)
-* Amazon (AMZN)
-* Google (GOOGL)
-* Meta (META)
-* Tesla (TSLA)
+### Technology
+- AAPL
+- MSFT
+- NVDA
+- AMD
+- AMZN
+- META
+- GOOGL
+- NFLX
+- TSLA
+- INTC
 
-Additional market indicators included:
+### Healthcare
+- JNJ
+- PFE
+- MRK
+- ABBV
 
-* SPY
-* QQQ
-* VIX
+### Financials
+- JPM
+- BAC
+- GS
+
+### Energy
+- XOM
+- CVX
+
+### Consumer
+- WMT
+- COST
+- PG
+
+In addition to stock-level data, market-wide indicators were incorporated:
+
+- SPY
+- QQQ
+- VIX
+
+The final dataset was engineered into a feature-rich time-series classification problem for predicting future market direction.
 
 ---
 
@@ -240,21 +289,23 @@ XGBoost achieved the strongest overall performance and was selected as the produ
 
 ## Baseline Model Performance
 
-![Baseline Performance](reports/figures/baseline_performance.png)
+![Baseline Performance](/reports/figures/baseline_performance.png)
 
-| Metric    | Score |
-| --------- | ----- |
-| F1 Score  | 0.725 |
-| Precision | 0.875 |
-| Recall    | 0.619 |
+| Metric             | Score |
+|-------------------|--------|
+| F1 Score          | 0.675 |
+| Precision         | 0.516 |
+| Recall            | 0.973 |
+| Balanced Accuracy | 0.638 |
+| MCC               | 0.354 |
 
 ### Interpretation
 
-The baseline model achieved strong precision while maintaining reasonable recall.
+The baseline model achieved extremely high recall (0.973) but relatively low precision (0.516).
 
-This behavior is desirable in trading systems where minimizing false-positive trade signals is often more important than maximizing trade frequency.
+This indicates that the model successfully identifies most positive market movements but also generates a larger number of false-positive trading signals.
 
-The baseline serves as the reference point for evaluating monitoring and retraining strategies.
+The resulting F1 score of 0.675 reflects a balance between aggressive signal generation and prediction accuracy.
 
 ---
 
@@ -266,17 +317,22 @@ The baseline serves as the reference point for evaluating monitoring and retrain
 
 The most influential features were:
 
-1. SPY Volatility
-2. SPY Moving Average
-3. QQQ Moving Average
-4. VIX Level
-5. RSI
+1. QQQ_MA_10
+2. SPY_MA_5
+3. VIX_Level
+4. SPY_Volatility
+5. VIX_MA_5
+6. QQQ_Momentum
+7. Sector_Healthcare
+8. VIX_Return
+9. QQQ_Return
+10. Volume_MA_5
 
 ### Key Finding
 
-Market-wide indicators contributed more heavily to predictive performance than individual stock-specific variables.
+The most influential features were dominated by market-wide indicators such as QQQ moving averages, SPY moving averages, VIX levels, and market volatility measures.
 
-This suggests that overall market conditions play a dominant role in stock direction prediction.
+This suggests that broad market conditions contribute more strongly to predictive performance than individual stock-specific characteristics.
 
 ---
 
@@ -296,11 +352,19 @@ The SHAP summary plot illustrates both feature importance and directional impact
 
 ### Results
 
-| Portfolio       | Final Value |
-| --------------- | ----------- |
-| Initial Capital | $10,000     |
-| Buy & Hold      | ~$20,500    |
-| ML Strategy     | ~$43,000    |
+Initial Capital: $10,000
+Strategy Final Value: ~$24,200
+Buy & Hold Final Value: ~$16,800
+
+| Metric | Result |
+|---------|---------|
+| Strategy Return | 142.03% |
+| Market Return | 67.85% |
+| Sharpe Ratio | 3.09 |
+| Max Drawdown | -12.02% |
+| Win Rate | 59.44% |
+
+The model-driven strategy substantially outperformed the buy-and-hold benchmark, more than doubling market returns while maintaining a strong risk-adjusted Sharpe ratio.
 
 ### Interpretation
 
@@ -312,19 +376,25 @@ While historical performance does not guarantee future returns, these results de
 
 ## Market Regime Analysis
 
+**Market Regime Performance**
+
 ![Market Regime Performance](reports/figures/regime_f1_scores.png)
 
-| Market Regime     | F1 Score |
-| ----------------- | -------- |
-| High Volatility   | ~0.92    |
-| Medium Volatility | ~0.83    |
-| Low Volatility    | ~0.72    |
+**Market Regime Returns**
+
+![Market Regime Returns](reports/figures/regime_returns.png)
+
+| Market Regime | Samples | F1 Score |
+|---------------|---------|----------|
+| High Volatility | 330 | 0.81 |
+| Medium Volatility | 2398 | 0.74 |
+| Low Volatility | 8228 | 0.65 |
 
 ### Key Finding
 
-Model performance improved significantly during periods of elevated volatility.
+The model performs best during periods of elevated volatility.
 
-This suggests stronger predictive signals emerge during turbulent market conditions compared to calm market environments.
+Higher volatility appears to generate stronger directional signals, improving classification performance and trading outcomes.
 
 ---
 
@@ -340,7 +410,15 @@ When statistically significant drift is detected, retraining is triggered automa
 
 #### Observation
 
-Performance remained relatively stable over time, demonstrating the effectiveness of adaptive retraining.
+The monitoring system detected only moderate feature drift.
+
+Observed PSI values were generally below the retraining threshold, with the highest monitored features showing moderate distribution shifts:
+
+- Volatility PSI = 0.202
+- Relative_SPY_Volatility PSI = 0.209
+- Relative_VIX_Level PSI = 0.219
+
+No feature exceeded the configured retraining threshold of 0.25, and no automatic retraining was triggered during monitoring evaluation.
 
 ---
 
@@ -356,41 +434,106 @@ Scheduled retraining successfully maintained model performance but may retrain u
 
 ---
 
+## Sector Performance Analysis
+
+![Sector Performance](reports/figures/sector_f1_scores.png)
+
+| Sector | Approximate F1 Score |
+|---------|---------|
+| Consumer | 0.62 |
+| Energy | 0.66 |
+| Financials | 0.71 |
+| Healthcare | 0.67 |
+| Technology | 0.69 |
+
+### Key Finding
+
+Model performance remained relatively consistent across sectors, with Financials and Technology producing the strongest predictive performance.
+
+This suggests that the model generalizes reasonably well across multiple market sectors rather than relying solely on technology stocks.
+
+---
+
+## Model Comparison
+
+Four machine learning algorithms were evaluated:
+
+- Logistic Regression
+- Random Forest
+- Extra Trees
+- XGBoost
+
+XGBoost achieved the strongest overall balance between recall, precision, and F1 score and was therefore selected as the production model used throughout the monitoring and retraining experiments.
+
+---
+
 ## Research Findings
 
 ### RQ1: How do different model drift detection and retraining strategies affect model performance over time?
 
-Monitoring and retraining successfully maintained predictive performance after deployment by adapting the model to evolving market conditions.
+Both monitoring-based approaches successfully maintained predictive performance over time.
+
+The evaluated stock dataset exhibited only moderate distribution shifts, resulting in limited degradation of model performance.
+
+Retraining mechanisms therefore produced stable results but did not generate large performance improvements.
 
 ---
 
 ### RQ2: Does scheduled or drift-triggered retraining perform better?
 
-Both approaches achieved comparable predictive performance.
+Scheduled and drift-triggered retraining achieved comparable predictive performance throughout the simulation experiments.
 
-However, drift-triggered retraining reduced unnecessary retraining events and therefore provided greater operational efficiency.
+However, drift-triggered retraining reduced unnecessary retraining operations by activating only when monitored drift thresholds were exceeded.
+
+This suggests that monitoring-driven retraining can achieve similar predictive quality with lower operational overhead.
 
 ---
 
-### RQ3: What are the trade-offs between accuracy and system complexity?
+### RQ3: What are the trade-offs between model accuracy and system complexity?
 
-| Approach                   | Accuracy | Complexity |
-| -------------------------- | -------- | ---------- |
-| Baseline Model             | Moderate | Low        |
-| Scheduled Retraining       | Stable   | Medium     |
-| Drift-Triggered Retraining | Stable   | High       |
+| Approach | Accuracy | Operational Complexity |
+|-----------|-----------|------------------------|
+| Baseline Model | Moderate | Low |
+| Scheduled Retraining | Stable | Medium |
+| Drift-Triggered Retraining | Stable | High |
 
-Drift-triggered retraining introduces additional monitoring complexity but provides improved efficiency and adaptability.
+Drift-triggered retraining requires additional monitoring infrastructure, statistical testing, reporting, and automation logic.
+
+While predictive performance remained similar to scheduled retraining in this study, the approach offers improved governance, auditability, and retraining efficiency.
+
+---
+
+## Final Results Summary
+
+| Component | Result |
+|------------|---------|
+| Production Model | XGBoost |
+| F1 Score | 0.675 |
+| Recall | 0.973 |
+| Strategy Return | 142.03% |
+| Buy & Hold Return | 67.85% |
+| Best Regime | High Volatility |
+| Top Feature | QQQ_MA_10 |
+| Drift Detected | Moderate |
+| Retraining Triggered | No |
 
 ---
 
 ## Conclusion
 
-This study demonstrates that integrating monitoring and retraining mechanisms into an MLOps pipeline can help maintain predictive performance in dynamic financial environments.
+This project developed a complete end-to-end MLOps pipeline for stock market prediction, incorporating data ingestion, feature engineering, model training, explainability, backtesting, deployment, monitoring, and automated retraining.
 
-While both scheduled and drift-triggered retraining strategies proved effective, drift-triggered retraining achieved comparable performance with greater operational efficiency by retraining only when statistically significant distribution changes were detected.
+Experimental results demonstrated that:
 
-The findings support the adoption of monitoring-driven retraining workflows for long-term maintenance of production machine learning systems.
+- XGBoost achieved the strongest predictive performance among evaluated models.
+- Market-wide indicators such as SPY, QQQ, and VIX were the most influential predictors according to SHAP analysis.
+- The trading strategy significantly outperformed a buy-and-hold benchmark during historical backtesting.
+- Predictive performance improved during periods of elevated market volatility.
+- Only moderate production drift was observed in the evaluated dataset.
+- Scheduled and drift-triggered retraining achieved comparable predictive performance.
+- Drift-triggered retraining reduced unnecessary retraining operations while maintaining model quality.
+
+Overall, the findings suggest that monitoring-driven retraining provides a practical balance between predictive performance and operational efficiency. Although the observed drift levels were not severe enough to produce substantial accuracy differences, the monitoring framework provides valuable automation, governance, and adaptability for long-term machine learning system maintenance.
 
 ---
 

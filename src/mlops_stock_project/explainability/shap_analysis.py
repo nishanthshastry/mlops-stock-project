@@ -117,7 +117,12 @@ def run_shap_analysis(
 
     explainer = shap.TreeExplainer(actual_model)
 
-    shap_values = explainer.shap_values(X_transformed)
+    shap_values = explainer(X_transformed)
+
+    if hasattr(shap_values, "values"):
+        shap_values_array = shap_values.values
+    else:
+        shap_values_array = shap_values
 
     logger.info("SHAP values generated")
 
@@ -128,7 +133,7 @@ def run_shap_analysis(
     plt.figure(figsize=(14, 10))
 
     shap.summary_plot(
-        shap_values,
+        shap_values_array,
         X_sample,
         show=False,
     )
@@ -154,7 +159,7 @@ def run_shap_analysis(
     plt.figure(figsize=(12, 8))
 
     shap.summary_plot(
-        shap_values,
+        shap_values_array,
         X_sample,
         plot_type="bar",
         show=False,
@@ -180,13 +185,50 @@ def run_shap_analysis(
     importance_df = pd.DataFrame(
         {
             "feature": features,
-            "importance": np.abs(shap_values).mean(axis=0),
+            "importance": np.abs(shap_values_array).mean(axis=0),
         }
     )
 
     importance_df = importance_df.sort_values(
         "importance",
         ascending=False,
+    )
+
+    market_features = [
+        "SPY_Return",
+        "SPY_MA_5",
+        "SPY_Volatility",
+        "QQQ_Return",
+        "QQQ_Momentum",
+        "QQQ_MA_10",
+        "VIX_Return",
+        "VIX_MA_5",
+        "VIX_Level",
+    ]
+
+    sector_features = [c for c in importance_df["feature"] if "Sector" in c]
+
+    market_score = importance_df[importance_df["feature"].isin(market_features)][
+        "importance"
+    ].sum()
+
+    sector_score = importance_df[importance_df["feature"].isin(sector_features)][
+        "importance"
+    ].sum()
+
+    logger.info(f"Market Feature Importance: {market_score:.4f}")
+
+    logger.info(f"Sector Feature Importance: {sector_score:.4f}")
+
+    sector_importance = importance_df[importance_df["feature"].str.contains("Sector")]
+
+    logger.info(f"\nSector SHAP Importance:\n" f"{sector_importance}")
+
+    sector_csv = FIGURES_DIR / "sector_shap_importance.csv"
+
+    sector_importance.to_csv(
+        sector_csv,
+        index=False,
     )
 
     logger.info(f"\nTop SHAP Features:\n{importance_df.head(15)}")
