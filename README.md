@@ -33,48 +33,83 @@ The primary objective is to evaluate whether monitoring and retraining mechanism
 
 ## Project Evolution
 
-This repository contains the final version of the MLOps Stock Prediction Platform after incorporating instructor feedback and implementing advanced MLOps capabilities including:
+This repository contains the enhanced version of the original MLOps Stock Prediction project developed after incorporating instructor feedback and extending the research scope.
 
-- Drift detection and monitoring
-- Automated retraining workflows
-- MLflow experiment tracking
-- SHAP explainability
-- Regime-aware evaluation
-- Sector-level analysis
-- Strategy backtesting
-- CI/CD automation
-- Dockerized deployment
+The original project focused primarily on predicting stock movements for a portfolio of large-cap technology companies using technical indicators and machine learning models. During project review, several opportunities for improvement were identified:
 
-The original project submission prior to feedback integration is preserved in the following branch:
+* The dataset was heavily concentrated in the technology sector, limiting model generalizability.
+* Market-wide indicators appeared to dominate stock-specific signals.
+* Class imbalance influenced model behavior and evaluation metrics.
+* The operational impact of different retraining strategies had not been systematically evaluated.
+
+To address these observations, the project was expanded into a broader study of model drift and retraining strategies within an MLOps framework.
+
+Key enhancements include:
+
+* Expansion from a technology-focused dataset to a multi-sector stock universe including Technology, Healthcare, Financials, Energy, and Consumer sectors.
+* Investigation of market-regime behavior under varying volatility conditions.
+* Analysis of sector-level model performance and generalization.
+* Integration of model drift monitoring and automated retraining workflows.
+* Comparison of scheduled retraining versus drift-triggered retraining strategies.
+* Addition of SHAP explainability to understand whether predictions are driven by stock-specific or market-wide signals.
+* End-to-end productionization through FastAPI, Docker, MLflow, DVC, and GitHub Actions.
+
+The original project submission has been preserved in the `main-old` branch, while the current `main` branch represents the enhanced version developed after feedback-driven improvements and additional experimentation.
 
 **Original Version:** https://github.com/nishanthshastry/mlops-stock-project/tree/main-old
 
-The current `main` branch represents the enhanced version developed after multiple rounds of improvements and productionization work.
-
 ### Repository Branches
 
-| Branch | Purpose |
-|---------|---------|
-| main-old | Original project submission |
-| main | Enhanced project after feedback implementation |
+| Branch   | Purpose                                                                          |
+| -------- | -------------------------------------------------------------------------------- |
+| main-old | Original project submission                                                      |
+| main     | Enhanced version incorporating instructor feedback and additional MLOps research |
 
 ---
 
 ## Improvements Based on Instructor Feedback
 
-Compared to the original project version (main-old branch), the following enhancements were implemented:
+Compared to the original project version, the following improvements were implemented:
 
-- Added SHAP explainability
-- Added market regime analysis
-- Added sector-level evaluation
-- Added drift detection monitoring
-- Added automated retraining
-- Added MLflow experiment tracking
-- Added Docker deployment
-- Added FastAPI service endpoints
-- Added CI/CD automation
-- Added strategy backtesting against buy-and-hold baseline
-- Expanded stock universe from pure technology stocks to multiple sectors
+### Dataset Expansion
+
+- Expanded the stock universe beyond large-cap technology companies.
+- Added Healthcare, Financial, Energy, and Consumer sector stocks.
+- Improved evaluation of model generalization across different market segments.
+
+### Evaluation Improvements
+
+- Added sector-level performance analysis.
+- Added market-regime analysis based on volatility conditions.
+- Investigated model behavior under high-, medium-, and low-volatility environments.
+- Addressed class imbalance considerations during model evaluation and threshold selection.
+
+### Explainability Improvements
+
+- Added SHAP-based explainability analysis.
+- Verified the influence of market-wide indicators such as SPY, QQQ, and VIX.
+- Evaluated the relationship between broad market conditions and stock-level predictions.
+
+### MLOps Enhancements
+
+- Added automated drift monitoring using production-style monitoring workflows.
+- Implemented drift-triggered retraining.
+- Implemented scheduled retraining for comparison.
+- Evaluated operational trade-offs between retraining strategies.
+
+### Productionization Enhancements
+
+- Added FastAPI model serving.
+- Added Docker containerization.
+- Added MLflow experiment tracking.
+- Added DVC-based data versioning.
+- Added CI/CD automation using GitHub Actions.
+
+### Financial Evaluation Enhancements
+
+- Added trading strategy backtesting.
+- Compared model-driven trading performance against a buy-and-hold benchmark.
+- Evaluated predictive performance from both machine learning and financial perspectives.
 
 ---
 
