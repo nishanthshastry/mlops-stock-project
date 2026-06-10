@@ -31,85 +31,94 @@ The primary objective is to evaluate whether monitoring and retraining mechanism
 
 ---
 
-## Project Evolution
+## Project Evolution and Response to Project Review
 
-This repository contains the enhanced version of the original MLOps Stock Prediction project developed after incorporating instructor feedback and extending the research scope.
+This repository represents the final version of the MLOps Stock Prediction Platform after incorporating observations and recommendations from project review discussions.
 
-The original project focused primarily on predicting stock movements for a portfolio of large-cap technology companies using technical indicators and machine learning models. During project review, several opportunities for improvement were identified:
+The original version of the project implemented an end-to-end MLOps pipeline for stock market prediction, including data ingestion, feature engineering, model training, FastAPI deployment, Docker containerization, MLflow tracking, monitoring, and automated retraining workflows. The project primarily focused on predicting stock movements for a portfolio of large-cap technology companies using market and technical indicators.
 
-* The dataset was heavily concentrated in the technology sector, limiting model generalizability.
-* Market-wide indicators appeared to dominate stock-specific signals.
-* Class imbalance influenced model behavior and evaluation metrics.
-* The operational impact of different retraining strategies had not been systematically evaluated.
+During project review, several important observations were raised regarding both the machine learning model and the research scope of the study.
 
-To address these observations, the project was expanded into a broader study of model drift and retraining strategies within an MLOps framework.
+### Observation 1: Limited Dataset Diversity
 
-Key enhancements include:
+The original dataset consisted primarily of large-cap technology companies. Since these stocks often move together and are highly correlated with broader market indices, there was concern that the model might be learning general market behavior rather than stock-specific patterns.
 
-* Expansion from a technology-focused dataset to a multi-sector stock universe including Technology, Healthcare, Financials, Energy, and Consumer sectors.
-* Investigation of market-regime behavior under varying volatility conditions.
-* Analysis of sector-level model performance and generalization.
-* Integration of model drift monitoring and automated retraining workflows.
-* Comparison of scheduled retraining versus drift-triggered retraining strategies.
-* Addition of SHAP explainability to understand whether predictions are driven by stock-specific or market-wide signals.
-* End-to-end productionization through FastAPI, Docker, MLflow, DVC, and GitHub Actions.
+#### Actions Taken
 
-The original project submission has been preserved in the `main-old` branch, while the current `main` branch represents the enhanced version developed after feedback-driven improvements and additional experimentation.
+* Expanded the stock universe beyond technology companies.
+* Added Healthcare, Financial, Energy, and Consumer sector stocks.
+* Increased sector diversity to improve model generalizability.
+* Added sector-level evaluation and performance reporting.
+
+#### Outcome
+
+The expanded dataset enabled analysis across multiple industries and provided a stronger basis for evaluating whether the model could generalize beyond a technology-focused portfolio.
+
+---
+
+### Observation 2: Market-Wide Features Appeared Dominant
+
+Review discussions highlighted that features derived from SPY, QQQ, and VIX appeared to contribute heavily to predictions, raising questions about whether the model relied primarily on overall market behavior.
+
+#### Actions Taken
+
+* Performed detailed SHAP explainability analysis.
+* Quantified the importance of market-wide indicators.
+* Introduced sector-aware analysis to compare market and sector influences.
+
+#### Outcome
+
+SHAP analysis confirmed that market-wide indicators remain highly influential predictors, supporting the hypothesis that broader market conditions play a major role in stock direction forecasting.
+
+---
+
+### Observation 3: Class Imbalance Can Affect Interpretation of F1 Score
+
+Review discussions noted that stock prices tend to rise more frequently than they fall, which can lead to class imbalance and potentially inflate performance metrics.
+
+#### Actions Taken
+
+* Added threshold optimization rather than relying on the default 0.50 classification threshold.
+* Evaluated additional metrics including Precision, Recall, Balanced Accuracy, MCC, Sharpe Ratio, and Win Rate.
+* Documented class imbalance considerations throughout model evaluation.
+
+#### Outcome
+
+The analysis provided a more comprehensive view of model performance and reduced reliance on a single evaluation metric.
+
+---
+
+### Observation 4: Retraining Strategies Required Further Evaluation
+
+A central research question of the project was whether retraining on a fixed schedule or only when drift is detected would provide better operational outcomes.
+
+#### Actions Taken
+
+* Implemented automated drift monitoring using PSI and KS-statistic based drift detection.
+* Developed a scheduled retraining simulation.
+* Developed a drift-triggered retraining simulation.
+* Compared model performance and retraining frequency across both approaches.
+
+#### Outcome
+
+Both retraining strategies achieved similar predictive performance. However, drift-triggered retraining required fewer retraining events, suggesting greater operational efficiency while maintaining comparable accuracy.
+
+---
+
+### Resulting Research Scope
+
+These enhancements transformed the project from a traditional stock prediction pipeline into a broader study of model drift, monitoring, explainability, retraining strategies, and model generalization within a production-oriented MLOps environment.
+
+The original project submission has been preserved in the `main-old` branch, while the current `main` branch contains the enhanced version incorporating additional experimentation, analysis, and evaluation.
 
 **Original Version:** https://github.com/nishanthshastry/mlops-stock-project/tree/main-old
 
 ### Repository Branches
 
-| Branch   | Purpose                                                                          |
-| -------- | -------------------------------------------------------------------------------- |
-| main-old | Original project submission                                                      |
-| main     | Enhanced version incorporating instructor feedback and additional MLOps research |
-
----
-
-## Improvements Based on Instructor Feedback
-
-Compared to the original project version, the following improvements were implemented:
-
-### Dataset Expansion
-
-- Expanded the stock universe beyond large-cap technology companies.
-- Added Healthcare, Financial, Energy, and Consumer sector stocks.
-- Improved evaluation of model generalization across different market segments.
-
-### Evaluation Improvements
-
-- Added sector-level performance analysis.
-- Added market-regime analysis based on volatility conditions.
-- Investigated model behavior under high-, medium-, and low-volatility environments.
-- Addressed class imbalance considerations during model evaluation and threshold selection.
-
-### Explainability Improvements
-
-- Added SHAP-based explainability analysis.
-- Verified the influence of market-wide indicators such as SPY, QQQ, and VIX.
-- Evaluated the relationship between broad market conditions and stock-level predictions.
-
-### MLOps Enhancements
-
-- Added automated drift monitoring using production-style monitoring workflows.
-- Implemented drift-triggered retraining.
-- Implemented scheduled retraining for comparison.
-- Evaluated operational trade-offs between retraining strategies.
-
-### Productionization Enhancements
-
-- Added FastAPI model serving.
-- Added Docker containerization.
-- Added MLflow experiment tracking.
-- Added DVC-based data versioning.
-- Added CI/CD automation using GitHub Actions.
-
-### Financial Evaluation Enhancements
-
-- Added trading strategy backtesting.
-- Compared model-driven trading performance against a buy-and-hold benchmark.
-- Evaluated predictive performance from both machine learning and financial perspectives.
+| Branch   | Purpose                                                                                |
+| -------- | -------------------------------------------------------------------------------------- |
+| main-old | Original project submission                                                            |
+| main     | Enhanced version incorporating review-driven improvements and extended experimentation |
 
 ---
 
